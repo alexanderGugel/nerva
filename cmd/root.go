@@ -31,7 +31,7 @@ import (
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "nerva",
-	Short: "A brief description of your application",
+	Short: "Common JS registry server",
 	Long:  ``,
 }
 

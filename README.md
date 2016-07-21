@@ -129,7 +129,7 @@ running a private Common JS registry (such as npm enterprise).
 
 ## Project Status
 
-The project is in **pre-alpha** stage. While the registry server is in a usable
+The project is in **pre-alpha** stage. While the registry server is in an usable
 state, the documentation is currently insufficient and the setup process
 tedious.
 
@@ -160,11 +160,83 @@ development, having a `.nerva` config file is usually not recommended.
 
 ## Production Setup
 
-**Warning** As mentioned in the project status, `nerva` is currently mainly a
-proof of concept. If you encounter any issues, please file an
-[issue](https://github.com/alexanderGugel/nerva/issues).
+**Warning** `nerva` is currently mainly a proof of concept. If you encounter any
+issues, please file an [issue](https://github.com/alexanderGugel/nerva/issues).
 
 For production usage, use one of the provided binaries.
+
+## Usage
+
+`nerva` is a binary. Currently the only supported subcommand is the `registry`
+command, which starts the actual registry server.
+
+The registry can be configured via environment variables, command line flags or
+an external configuration file.
+
+    ~/g/s/g/a/nerva (master) $ ./nerva
+    Common JS registry server
+
+    Usage:
+      nerva [command]
+
+    Available Commands:
+      registry    Start a new registry server
+
+    Flags:
+      -c, --config string         config file (default $HOME/.nerva.json|toml|yaml|yml|properties|props|prop|hcl)
+      -h, --help                  help for nerva
+      -f, --logFormatter string   log formatter (default "text")
+      -l, --logLevel string       log level (default "info")
+
+    Use "nerva [command] --help" for more information about a command.
+
+The registry command starts the actual registry server in the current working
+directory:
+
+    ~/g/s/g/a/nerva (master) $ ./nerva registry --help
+    Start a new registry server
+
+    Usage:
+      nerva registry [flags]
+
+    Flags:
+          --addr string          address to bind to for listening (default "127.0.0.1:8200")
+          --certFile string      path to TLS certificate file
+          --keyFile string       path to TLS key file
+          --shaCacheSize int     size of SHA1-cache (default 500)
+          --storageDir string    storage directory to use for Git repositories (default "./packages")
+          --upstreamURL string   upstream Common JS registry (default "http://registry.npmjs.com")
+
+    Global Flags:
+      -c, --config string         config file (default $HOME/.nerva.json|toml|yaml|yml|properties|props|prop|hcl)
+      -f, --logFormatter string   log formatter (default "text")
+      -l, --logLevel string       log level (default "info")
+
+The external configuration file can be in a variety of formats, including
+`toml`, `yaml`, `yml`, `properties`, `props`, `prop`, `hcl`.
+
+A complete config file (in YAML) might look as follows:
+
+```yml
+listener:
+  addr: ":8080"
+
+  # HTTPS is supported. To enable it, provide the respective cert and key
+  # files.
+  certFile: "..."
+  keyFile: "..."
+
+backend:
+  storageDir: "./packages"
+
+backend
+  upstreamURL: "http://registry.npmjs.com"
+
+cache:
+  # The SHA cache is being used in order to map Git object ids to the shasums
+  # of the generated package tarballs.
+  shaCacheSize: 5000
+```
 
 ## License
 
