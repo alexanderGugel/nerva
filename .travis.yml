@@ -6,5 +6,8 @@ go:
  - release
  - tip
 
+before_install:
+ - rm -rf vendor
+
 script:
  - go test -v ./...
