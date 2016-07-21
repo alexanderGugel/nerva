@@ -1,0 +1,5 @@
+- [x] add shasum cache
+- [ ] add tarball cache
+- [ ] add auditing abilities
+- [ ] add status page
+- [ ] add Dockerfile
