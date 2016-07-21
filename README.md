@@ -1,8 +1,6 @@
 [![Build Status](https://travis-ci.org/alexanderGugel/nerva.svg?branch=master)](https://travis-ci.org/alexanderGugel/nerva)
 [![GitHub tag](https://img.shields.io/github/tag/alexanderGugel/nerva.svg?maxAge=2592000)](https://github.com/alexanderGugel/nerva)
 
-![cool](https://cdn.rawgit.com/alexanderGugel/nerva/master/public/cool.svg)
-
 # nerva (PoC)
 
 `nerva` is a RESTful, `package.json`-aware registry server. It aims to offer a
