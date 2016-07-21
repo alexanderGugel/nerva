@@ -168,6 +168,10 @@ proof of concept. If you encounter any issues, please file an
 
 For production usage, use one of the provided binaries.
 
+## License
+
+Licensed under the MIT license. See [LICENSE](LICENSE).
+
 ### Credits
 
 * [Cool] [2] by [JMA] [3] from [the Noun Project] [4]
