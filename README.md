@@ -228,8 +228,6 @@ listener:
 
 backend:
   storageDir: "./packages"
-
-backend
   upstreamURL: "http://registry.npmjs.com"
 
 cache:
