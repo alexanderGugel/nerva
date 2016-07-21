@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/alexanderGugel/nerva.svg?branch=master)](https://travis-ci.org/alexanderGugel/nerva)
 [![GitHub tag](https://img.shields.io/github/tag/alexanderGugel/nerva.svg?maxAge=2592000)](https://github.com/alexanderGugel/nerva)
 
-![cool](public/cool.svg)
+![cool](https://cdn.rawgit.com/alexanderGugel/nerva/master/public/cool.svg)
 
 # nerva (PoC)
 
@@ -22,6 +22,8 @@ solution).
 
 `nerva` implements the [CommonJS] [1] registry specification that defines a
 standardized way of **identifying** and **locating** packages.
+
+![nerva](https://cdn.rawgit.com/alexanderGugel/nerva/master/public/nerva.svg)
 
 ### Unified hosting
 
@@ -119,7 +121,7 @@ Git, there shouldn't be a need for manually publishing individual versions of a
 hosted package. An ideal registry server shouldn't try to re-implement version
 control, instead it should "infer" arbitrary versions of a package.
 
-![npm registry](registry-wall.svg)
+![npm registry](https://cdn.rawgit.com/alexanderGugel/nerva/master/public/registry-wall.svg)
 
 As a consequence of npm's current architecture, package authors are able to
 publish arbitrary, potentially dangerous tarballs. While the current npm
@@ -164,7 +166,7 @@ development, having a `.nerva` config file is usually not recommended.
 proof of concept. If you encounter any issues, please file an
 [issue](https://github.com/alexanderGugel/nerva/issues).
 
-For production usage, use one of the provided releases.
+For production usage, use one of the provided binaries.
 
 ### Credits
 
