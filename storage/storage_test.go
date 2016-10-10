@@ -57,7 +57,46 @@ func TestLs(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("storage.Ls() = %v want %v", got, want)
 	}
+}
 
+func TestLsFailedReadDir(t *testing.T) {
+	dir := createTempDir(t)
+	defer os.RemoveAll(dir)
+
+	nonExistingDir := filepath.Join(dir, "non_existing")
+	storage := New(nonExistingDir)
+
+	names, err := storage.Ls()
+	if err == nil {
+		t.Errorf("expected storage.Ls() to fail")
+	}
+	if names != nil {
+		t.Errorf("storage.Ls() = %v want %v", names, nil)
+	}
+}
+
+func TestLsFiles(t *testing.T) {
+	dir := createTempDir(t)
+	defer os.RemoveAll(dir)
+
+	dirA := filepath.Join(dir, "a")
+	createTestRepo(dirA, t)
+
+	err := ioutil.WriteFile(filepath.Join(dir, "file"), nil, 0644)
+	if err != nil {
+		t.Fatalf("failed to write non-directory file into %v: %v", dir, err)
+	}
+
+	storage := New(dir)
+
+	got, err := storage.Ls()
+	want := []string{"a"}
+	if err != nil {
+		t.Errorf("failed storage.Ls(): %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("storage.Ls() = %v want %v", got, want)
+	}
 }
 
 func TestGetRepo(t *testing.T) {
@@ -75,6 +114,19 @@ func TestGetRepo(t *testing.T) {
 	}
 	if repo == nil {
 		t.Errorf("storage.GetRepo(%s) = %v want *git.Repository", name, repo)
+	}
+}
+
+func TestPeelTreeFailedLookup(t *testing.T) {
+	dir := createTempDir(t)
+	defer os.RemoveAll(dir)
+
+	dirA := filepath.Join(dir, "a")
+	repo := createTestRepo(dirA, t)
+
+	var zeroID git.Oid
+	if _, err := PeelTree(repo, &zeroID); err == nil {
+		t.Errorf("expected PeelTree(repo, %v) to fail", zeroID)
 	}
 }
 
