@@ -23,7 +23,6 @@
 package storage
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/libgit2/git2go"
 	"io/ioutil"
 	"path"
@@ -57,9 +56,6 @@ func (s *Storage) Ls() ([]string, error) {
 		name := file.Name()
 		if file.IsDir() {
 			names = append(names, name)
-		} else {
-			contextLog := log.WithFields(log.Fields{"dir": s.Dir, "name": name})
-			contextLog.Warn("storage contains non-directory listing")
 		}
 	}
 

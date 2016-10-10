@@ -20,12 +20,83 @@
 
 package storage
 
-import "testing"
+import (
+	"github.com/libgit2/git2go"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+)
 
 func TestNew(t *testing.T) {
-    dir := "./some/directory"
-    storage := New(dir)
-    if storage.Dir != dir {
-        t.Errorf("New(%s).Dir = %v want %v", dir, storage.Dir, dir)
-    }
+	dir := "./some/directory"
+	storage := New(dir)
+	if storage.Dir != dir {
+		t.Errorf("New(%s).Dir = %v want %v", dir, storage.Dir, dir)
+	}
+}
+
+func TestLs(t *testing.T) {
+	dir := createTempDir(t)
+	defer os.RemoveAll(dir)
+
+	dirA := filepath.Join(dir, "a")
+	dirB := filepath.Join(dir, "b")
+
+	createTestRepo(dirA, t)
+	createTestRepo(dirB, t)
+
+	storage := New(dir)
+
+	got, err := storage.Ls()
+	want := []string{"a", "b"}
+	if err != nil {
+		t.Errorf("failed storage.Ls(): %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("storage.Ls() = %v want %v", got, want)
+	}
+
+}
+
+func TestGetRepo(t *testing.T) {
+	dir := createTempDir(t)
+	defer os.RemoveAll(dir)
+
+	name := "a"
+	dirA := filepath.Join(dir, name)
+	createTestRepo(dirA, t)
+
+	storage := New(dir)
+	repo, err := storage.GetRepo(name)
+	if err != nil {
+		t.Errorf("failed storage.GetRepo(%s): %v", name, err)
+	}
+	if repo == nil {
+		t.Errorf("storage.GetRepo(%s) = %v want *git.Repository", name, repo)
+	}
+}
+
+func createTempDir(t *testing.T) string {
+	path, err := ioutil.TempDir("", "storage_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	return path
+}
+
+func createTestRepo(path string, t *testing.T) *git.Repository {
+	repo, err := git.InitRepository(path, false)
+	if err != nil {
+		t.Fatalf("failed to initialize repository: %v", err)
+	}
+
+	tmpfile := "README"
+	err = ioutil.WriteFile(path+"/"+tmpfile, []byte("foo\n"), 0644)
+	if err != nil {
+		t.Fatalf("failed to write sample file: %v", err)
+	}
+
+	return repo
 }
