@@ -118,7 +118,7 @@ func New(storageDir string, upstreamURL string, shaCacheSize int) (*Registry, er
 // See http://wiki.commonjs.org/wiki/Packages/Registry#registry_root_url
 func (r *Registry) HandleRoot(w http.ResponseWriter, req *http.Request,
 	_ httprouter.Params) error {
-	res, err := NewRoot(r.Storage, req.Host)
+	res, err := NewRootFromStorage(r.Storage, req.Host)
 	if err != nil {
 		return err
 	}
@@ -180,9 +180,7 @@ func (r *Registry) HandlePackageDownload(repo *git.Repository,
 
 	d, err := storage.NewDownload(repo, id)
 	if err != nil || d == nil {
-		gitErr, ok := err.(*git.GitError)
-
-		if !ok || gitErr.Class != git.ErrClassOdb {
+		if gitErr, ok := err.(*git.GitError); !ok || gitErr.Class != git.ErrClassOdb {
 			return err
 		}
 		res := &util.ErrorResponse{"not found", "package not found"}

@@ -42,10 +42,10 @@ import (
 // See http://wiki.commonjs.org/wiki/Packages/Registry#registry_root_url
 type Root map[string]string
 
-// NewRoot creates a new CommonJS registry root document from a given
+// NewRootFromStorage creates a new CommonJS registry root document from a given
 // storage directory by reading in the repositories that are available in the
 // storage dir.
-func NewRoot(storage *storage.Storage, url string) (*Root, error) {
+func NewRootFromStorage(storage *storage.Storage, url string) (*Root, error) {
     root := Root{}
     names, _ := storage.Ls()
     for _, name := range names {

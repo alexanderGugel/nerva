@@ -61,7 +61,7 @@ func NewPackageVersion(repo *git.Repository, id *git.Oid) (*PackageVersion, erro
 
     contents := blob.Contents()
     packageVersion := &PackageVersion{}
-    if err = json.Unmarshal(contents, packageVersion); err != nil {
+    if err := json.Unmarshal(contents, packageVersion); err != nil {
         return nil, err
     }
 
