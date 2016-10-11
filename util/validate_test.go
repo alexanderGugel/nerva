@@ -34,13 +34,14 @@ var nameTests = []struct {
 	// 3. MUST NOT be “.” or “..”
 	{"..", false},
 	{".", false},
+	{"-", false},
 }
 
 func TestIsValid(t *testing.T) {
 	for _, tt := range nameTests {
 		isValid := IsValid(tt.name)
 		if isValid != tt.isValid {
-			t.Errorf("IsValid(%q) => %t, want %t", tt.name, isValid, tt.isValid)
+			t.Errorf("IsValid(%q) = %t, want %t", tt.name, isValid, tt.isValid)
 		}
 	}
 }

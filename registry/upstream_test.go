@@ -26,28 +26,46 @@ import (
     "testing"
 )
 
-func TestNewUpstream(t *testing.T) {
-    url := "http://registry.npmjs.com"
+func createUpstream(url string, t *testing.T) *Upstream {
     upstream, err := NewUpstream(url)
     if err != nil {
-        t.Fatalf("NewShaCache %s: %v", url, err)
+        t.Errorf("NewUpstream(%q) unexpected err: %q", url, err)
     }
+    return upstream
+}
+
+func TestNewUpstream(t *testing.T) {
+    url := "http://registry.npmjs.com"
+    upstream := createUpstream(url, t)
     if upstream.URL.String() != url {
-        t.Errorf("NewShaCache(%s).URL = %v want %v", url, upstream.URL.String(), url)
+        t.Errorf("upstream.URL = %q want %q", url, upstream.URL.String(), url)
     }
 }
 
-func TestUpstreamRedirectPackageRoot(t *testing.T) {
+func TestUpstreamRedirectCode(t *testing.T) {
     url := "http://registry.npmjs.com"
-    upstream, err := NewUpstream(url)
-    if err != nil {
-        t.Fatalf("NewShaCache %s: %v", url, err)
-    }
+    upstream := createUpstream(url, t)
+
     w := httptest.NewRecorder()
     req, _ := http.NewRequest("GET", "", nil)
-    name := "tape"
-    upstream.RedirectPackageRoot(name, w, req)
-    if w.Code != http.StatusMovedPermanently {
-        t.Errorf("RedirectPackageRoot %s: got code %s, want %s", name, w.Code, http.StatusMovedPermanently)
+    upstream.RedirectPackageRoot("tape", w, req)
+
+    wantCode := http.StatusMovedPermanently
+    if gotCode := w.Code; gotCode != wantCode {
+        t.Errorf("w.Code = %q, want %q", gotCode, wantCode)
+    }
+}
+
+func TestUpstreamRedirectHeader(t *testing.T) {
+    url := "http://registry.npmjs.com"
+    upstream := createUpstream(url, t)
+
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest("GET", "", nil)
+    upstream.RedirectPackageRoot("tape", w, req)
+
+    wantLocation := "http://registry.npmjs.com/tape"
+    if gotLocation := w.Header().Get("Location"); gotLocation != wantLocation {
+        t.Errorf("w.Header().Get(\"Location\") = %q, want %q", gotLocation, wantLocation)
     }
 }

@@ -43,7 +43,7 @@ type Registry struct {
 	Router   *httprouter.Router
 	Storage  *storage.Storage
 	Upstream *Upstream
-	shaCache *ShaCache
+	ShaCache *ShaCache
 }
 
 // PackageVersion represents a specific version of a package, typically its
@@ -164,7 +164,7 @@ func NewPackageRoot(name string, url string, repo *git.Repository, shaCache *Sha
 			if versions[version] != nil {
 				contextLog.Warn("duplicate version")
 			}
-			tarball := url + "/" + name + "/-/" + id.String()
+			tarball := "http://" + url + "/" + name + "/-/" + id.String()
 
 			shasum, ok := shaCache.Get(*id)
 			if !ok {
@@ -379,7 +379,7 @@ func (r *Registry) HandlePackageDownload(repo *git.Repository,
 func (r *Registry) HandlePackageRoot(repo *git.Repository,
 	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
 	name := ps.ByName("name")
-	res, err := NewPackageRoot(name, req.Host, repo, r.shaCache)
+	res, err := NewPackageRoot(name, req.Host, repo, r.ShaCache)
 	if err != nil {
 		return err
 	}

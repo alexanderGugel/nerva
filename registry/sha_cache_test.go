@@ -28,7 +28,7 @@ import (
 func TestNewShaCacheInvalidSize(t *testing.T) {
     for i := -1; i < 1; i++ {
         if _, err := NewShaCache(i); err == nil {
-            t.Errorf("NewShaCache %s: error expected, none found")
+            t.Errorf("NewShaCache(%q) expected err", i)
         }
     }
 }
@@ -36,7 +36,7 @@ func TestNewShaCacheInvalidSize(t *testing.T) {
 func TestNewShaCachePositiveSize(t *testing.T) {
     for i := 1; i < 100; i++ {
         if _, err := NewShaCache(i); err != nil {
-            t.Errorf("NewShaCache %s: %v", i, err)
+            t.Errorf("NewShaCache(%q) unexpected err: %q", i, err)
         }
     }
 }
@@ -44,35 +44,32 @@ func TestNewShaCachePositiveSize(t *testing.T) {
 func TestShaCacheAdd(t *testing.T) {
     c, err := NewShaCache(1)
     if err != nil {
-        t.Fatalf("NewShaCache %s: %v", 10, err)
+        t.Errorf("NewShaCache(%q) unexpected err: %q", 1, err)
     }
     id0 := *git.NewOidFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
     shasum0 := "shasum0"
     if ok := c.Add(id0, shasum0); ok {
-        t.Fatalf("Add(%s, %s): expected no eviction", id0, shasum0)
+        t.Errorf("c.Add(%q, %q) = %q want %q", id0, shasum0, ok, false)
     }
     id1 := *git.NewOidFromBytes([]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
     shasum1 := "shasum1"
     if ok := c.Add(id1, shasum1); !ok {
-        t.Fatalf("Add(%s, %s): expected eviction", id1, shasum1)
+        t.Errorf("c.Add(%q, %q) = %q want %q", id1, shasum1, ok, true)
     }
 }
 
 func TestShaCacheGet(t *testing.T) {
     c, err := NewShaCache(1)
     if err != nil {
-        t.Fatalf("NewShaCache %s: %v", 10, err)
+        t.Errorf("NewShaCache(%q) unexpected err: %q", 1, err)
     }
     id := *git.NewOidFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
     shasum := "shasum"
     if ok := c.Add(id, shasum); ok {
-        t.Fatalf("Add(%s, %s): expected no eviction", id, shasum)
+        t.Errorf("c.Add(%q, %q) = %q want %q", id, shasum, ok, false)
     }
     result, ok := c.Get(id)
-    if !ok {
-        t.Fatalf("Get(%v): should hit cache", id)
-    }
-    if result != shasum {
-        t.Fatalf("Get(%v): expected %v to be %v", id, result, shasum)
+    if !ok || result != shasum {
+        t.Errorf("c.Get(%q) = %q, %q want %q, %q", id, result, ok, shasum, true)
     }
 }

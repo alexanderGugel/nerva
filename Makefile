@@ -4,6 +4,12 @@ build:
 	@go build -o build/nerva
 
 release: build
-	go-release alexanderGugel nerva build/nerva
+	@go-release alexanderGugel nerva build/nerva
+
+test:
+	@go test ./...
+
+cov:
+	@go test -cover ./...
 
 .PHONY: build

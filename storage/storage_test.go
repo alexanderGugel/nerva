@@ -52,7 +52,7 @@ func TestLs(t *testing.T) {
 	got, err := storage.Ls()
 	want := []string{"a", "b"}
 	if err != nil {
-		t.Errorf("failed storage.Ls(): %v", err)
+		t.Errorf("failed storage.Ls() %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("storage.Ls() = %v want %v", got, want)
@@ -84,7 +84,7 @@ func TestLsFiles(t *testing.T) {
 
 	err := ioutil.WriteFile(filepath.Join(dir, "file"), nil, 0644)
 	if err != nil {
-		t.Fatalf("failed to write non-directory file into %v: %v", dir, err)
+		t.Fatalf("failed to write non-directory file into %v %v", dir, err)
 	}
 
 	storage := New(dir)
@@ -92,7 +92,7 @@ func TestLsFiles(t *testing.T) {
 	got, err := storage.Ls()
 	want := []string{"a"}
 	if err != nil {
-		t.Errorf("failed storage.Ls(): %v", err)
+		t.Errorf("failed storage.Ls() %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("storage.Ls() = %v want %v", got, want)
@@ -110,7 +110,7 @@ func TestGetRepo(t *testing.T) {
 	storage := New(dir)
 	repo, err := storage.GetRepo(name)
 	if err != nil {
-		t.Errorf("failed storage.GetRepo(%s): %v", name, err)
+		t.Errorf("failed storage.GetRepo(%s) %v", name, err)
 	}
 	if repo == nil {
 		t.Errorf("storage.GetRepo(%s) = %v want *git.Repository", name, repo)
@@ -133,7 +133,7 @@ func TestPeelTreeFailedLookup(t *testing.T) {
 func createTempDir(t *testing.T) string {
 	path, err := ioutil.TempDir("", "storage_test")
 	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
+		t.Fatalf("failed to create temp dir %v", err)
 	}
 	return path
 }
@@ -141,13 +141,13 @@ func createTempDir(t *testing.T) string {
 func createTestRepo(path string, t *testing.T) *git.Repository {
 	repo, err := git.InitRepository(path, false)
 	if err != nil {
-		t.Fatalf("failed to initialize repository: %v", err)
+		t.Fatalf("failed to initialize repository %v", err)
 	}
 
 	tmpfile := "README"
 	err = ioutil.WriteFile(path+"/"+tmpfile, []byte("foo\n"), 0644)
 	if err != nil {
-		t.Fatalf("failed to write sample file: %v", err)
+		t.Fatalf("failed to write sample file %v", err)
 	}
 
 	return repo

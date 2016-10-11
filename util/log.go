@@ -26,21 +26,23 @@ import (
 	"net/http"
 )
 
-// logWarn logs the passed in error.
+// LogWarn logs the passed in error.
 func LogWarn(ctx *log.Entry, err error, reason string) {
 	ctx.WithFields(log.Fields{"error": err}).Warn(reason)
 }
 
-// logErr logs the passed in error.
+// LogErr logs the passed in error.
 func LogErr(ctx *log.Entry, err error, reason string) {
 	ctx.WithFields(log.Fields{"error": err}).Error(reason)
 }
 
-// logFatal logs the passed in error and exits.
+// LogFatal logs the passed in error and exits.
 func LogFatal(ctx *log.Entry, err error, reason string) {
 	ctx.WithFields(log.Fields{"error": err}).Fatal(reason)
 }
 
+// RequestContext creates a new context used for logging from a plain HTTP
+// request.
 func RequestContext(req *http.Request) *log.Entry {
 	return log.WithFields(log.Fields{
 		"RemoteAddr": req.RemoteAddr,
@@ -49,6 +51,7 @@ func RequestContext(req *http.Request) *log.Entry {
 	})
 }
 
+// LogRequest logs an incoming HTTP request.
 func LogRequest(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		RequestContext(req).Info("request")

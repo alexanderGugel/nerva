@@ -45,6 +45,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
 	cobra.OnInitialize(initLogFormatter)
 	cobra.OnInitialize(initLogLevel)
 

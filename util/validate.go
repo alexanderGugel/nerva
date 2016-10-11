@@ -30,13 +30,13 @@ package util
 // 4. SHOULD contain only URL-safe characters
 // See http://wiki.commonjs.org/wiki/Packages/Registry#Changes_to_Packages_Spec
 func IsValid(name string) bool {
-	if name[0] == '-' || name == "." || name == ".." {
-		return false
-	}
-	for _, c := range name {
-		if c == '/' {
-			return false
-		}
-	}
-	return true
+    if name[0] == '-' || name == "." || name == ".." {
+        return false
+    }
+    for _, c := range name {
+        if c == '/' {
+            return false
+        }
+    }
+    return true
 }

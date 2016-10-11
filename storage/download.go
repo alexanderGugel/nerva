@@ -22,8 +22,6 @@ package storage
 
 import (
 	"archive/tar"
-	log "github.com/Sirupsen/logrus"
-	"github.com/alexanderGugel/nerva/util"
 	"github.com/libgit2/git2go"
 	"io"
 	"path"
@@ -31,8 +29,9 @@ import (
 
 // Download represents an ongoing download.
 type Download struct {
-	Repo *git.Repository
-	Tree *git.Tree
+	Repo   *git.Repository
+	Tree   *git.Tree
+	Prefix string
 }
 
 // NewDownload creates a new download.
@@ -52,7 +51,7 @@ func NewDownload(repo *git.Repository, id *git.Oid) (*Download, error) {
 		return nil, err
 	}
 
-	return &Download{repo, tree}, nil
+	return &Download{repo, tree, "package"}, nil
 }
 
 // Start recursively traverses the internal Git object tree and dynamically
@@ -61,15 +60,16 @@ func (d *Download) Start(w io.Writer) error {
 	tarWriter := tar.NewWriter(w)
 	defer tarWriter.Close()
 
-	return d.Tree.Walk(func(dir string, entry *git.TreeEntry) int {
-		name := path.Join("package", dir, entry.Name)
-		contextLog := log.WithFields(log.Fields{"name": name})
+	var innerErr error
+
+	if walkErr := d.Tree.Walk(func(dir string, entry *git.TreeEntry) int {
+		name := path.Join(d.Prefix, dir, entry.Name)
 
 		switch entry.Type {
 		case git.ObjectBlob:
 			blob, err := d.Repo.LookupBlob(entry.Id)
 			if err != nil {
-				util.LogErr(contextLog, err, "failed to lookup blob")
+				innerErr = err
 				return 1
 			}
 			hdr := &tar.Header{
@@ -78,18 +78,22 @@ func (d *Download) Start(w io.Writer) error {
 				Size: int64(blob.Size()),
 			}
 			if err := tarWriter.WriteHeader(hdr); err != nil {
-				util.LogErr(contextLog, err, "failed to write headers")
+				innerErr = err
 				return 1
 			}
 			if _, err := tarWriter.Write(blob.Contents()); err != nil {
-				util.LogErr(contextLog, err, "failed to write contents")
+				innerErr = err
 				return 1
 			}
 			if err := tarWriter.Flush(); err != nil {
-				util.LogErr(contextLog, err, "failed to flush writer")
+				innerErr = err
 				return 1
 			}
 		}
 		return 0
-	})
+	}); walkErr != nil {
+		return walkErr
+	}
+
+	return innerErr
 }
