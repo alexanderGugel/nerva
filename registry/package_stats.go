@@ -20,11 +20,35 @@
 
 package registry
 
-// Ping represents the response to a ping request. Ping is simply an empty
-// object used by npm ping.
-type Ping struct{}
+import "github.com/libgit2/git2go"
 
-// NewPing creates a new ping object.
-func NewPing() *Ping {
-    return &Ping{}
+// PackageStats contains information about the underlying git repo of a package.
+type PackageStats struct {
+    Remotes []*PackageRemote `json:"remotes"`
+}
+
+// PackageRemote is the equivalent to `git remote -v`.
+type PackageRemote struct {
+    Name string `json:"name"`
+    URL  string `json:"url"`
+}
+
+// NewPackageStats create a package stats object, which contains information
+// about the underlying git repository.
+func NewPackageStats(repo *git.Repository) (*PackageStats, error) {
+    names, err := repo.Remotes.List()
+    if err != nil {
+        return nil, err
+    }
+    remotes := []*PackageRemote{}
+    for _, name := range names {
+        remote, err := repo.Remotes.Lookup(name)
+        if err != nil {
+            return nil, err
+        }
+        url := remote.Url()
+        remotes = append(remotes, &PackageRemote{name, url})
+    }
+    stats := &PackageStats{remotes}
+    return stats, nil
 }

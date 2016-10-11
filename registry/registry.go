@@ -40,37 +40,6 @@ type Registry struct {
 	ShaCache *ShaCache
 }
 
-// PackageStats contains information about the underlying git repo of a package.
-type PackageStats struct {
-	Remotes []*PackageRemote `json:"remotes"`
-}
-
-// PackageRemote is the equivalent to `git remote -v`.
-type PackageRemote struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-}
-
-// NewPackageStats create a package stats object, which contains information
-// about the underlying git repository.
-func NewPackageStats(repo *git.Repository) (*PackageStats, error) {
-	names, err := repo.Remotes.List()
-	if err != nil {
-		return nil, err
-	}
-	remotes := []*PackageRemote{}
-	for _, name := range names {
-		remote, err := repo.Remotes.Lookup(name)
-		if err != nil {
-			return nil, err
-		}
-		url := remote.Url()
-		remotes = append(remotes, &PackageRemote{name, url})
-	}
-	stats := &PackageStats{remotes}
-	return stats, nil
-}
-
 // New create a new CommonJS registry.
 func New(storageDir string, upstreamURL string, shaCacheSize int) (*Registry, error) {
 	router := httprouter.New()

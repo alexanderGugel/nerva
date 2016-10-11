@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package registry implements a CommonJS compliant package registry.
-// See http://wiki.commonjs.org/wiki/Packages/Registry
 package registry
 
 // PackageRootVersions represents the versions map in a package root document
