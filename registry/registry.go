@@ -37,29 +37,51 @@ type Registry struct {
 	Storage  *storage.Storage
 	Upstream *Upstream
 	ShaCache *storage.ShaCache
+	Config   Config
 }
 
 // New create a new CommonJS registry.
-func New(c Config) (*Registry, error) {
-	upstream, err := NewUpstream(c.UpstreamURL)
+func New(config Config) (*Registry, error) {
+	upstream, err := NewUpstream(config.UpstreamURL)
 	if err != nil {
 		return nil, err
 	}
 
-	shaCache, err := storage.NewShaCache(c.ShaCacheSize)
+	shaCache, err := storage.NewShaCache(config.ShaCacheSize)
 	if err != nil {
 		return nil, err
 	}
 
 	registry := &Registry{
 		Router:   httprouter.New(),
-		Storage:  storage.New(c.StorageDir),
+		Storage:  storage.New(config.StorageDir),
 		Upstream: upstream,
 		ShaCache: shaCache,
+		Config:   config,
 	}
 	registry.attachRoutes()
 
 	return registry, nil
+}
+
+func (r *Registry) isTLSEnabled() bool {
+	return r.Config.CertFile != "" && r.Config.KeyFile != ""
+}
+
+func (r *Registry) getScheme() string {
+	if r.isTLSEnabled() {
+		return "https"
+	}
+	return "http"
+}
+
+// Start starts the registry.
+func (r *Registry) Start() error {
+	c := r.Config
+	if r.isTLSEnabled() {
+		return http.ListenAndServeTLS(c.Addr, c.CertFile, c.KeyFile, r.Router)
+	}
+	return http.ListenAndServe(c.Addr, r.Router)
 }
 
 func (r *Registry) attachRoutes() {

@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Package registry implements a CommonJS compliant package registry.
-// See http://wiki.commonjs.org/wiki/Packages/Registry
 package registry
 
 // Config represents the configuration options of registry.
@@ -27,4 +25,7 @@ type Config struct {
 	StorageDir   string
 	UpstreamURL  string
 	ShaCacheSize int
+	Addr         string
+	CertFile     string
+	KeyFile      string
 }

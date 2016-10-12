@@ -138,7 +138,7 @@ func (r *Registry) HandlePackageRoot(repo *git.Repository,
 	name := ps.ByName("name")
 	var url url.URL
 	url.Host = req.Host
-	url.Scheme = "http"
+	url.Scheme = r.getScheme()
 
 	res, err := NewPackageRoot(name, url.String(), repo, r.ShaCache)
 	if err != nil {

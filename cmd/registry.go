@@ -26,7 +26,6 @@ import (
 	"github.com/alexanderGugel/nerva/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"net/http"
 )
 
 // registryCmd represents the registry command
@@ -53,32 +52,25 @@ var registryCmd = &cobra.Command{
 			"shaCacheSize": shaCacheSize,
 		})
 
-		enableTLS := certFile != "" || keyFile != ""
-
-		if enableTLS && (certFile == "" || keyFile == "") {
+		if (certFile != "" || keyFile != "") &&
+			(certFile == "" || keyFile == "") {
 			contextLog.Fatal("missing keyFile or certFile")
 		}
-
-		contextLog.Info("starting registry")
 
 		registry, err := registry.New(registry.Config{
 			StorageDir:   storageDir,
 			UpstreamURL:  upstreamURL,
 			ShaCacheSize: shaCacheSize,
+			Addr:         addr,
+			CertFile:     certFile,
+			KeyFile:      keyFile,
 		})
 		if err != nil {
-			util.LogFatal(contextLog, err, "failed to instantiate registry")
+			util.LogFatal(contextLog, err, "failed to create registry")
 		}
 
-		if enableTLS {
-			err = http.ListenAndServeTLS(addr, certFile, keyFile, registry.Router)
-		} else {
-			contextLog.Warn("TLS not configured: missing certFile / keyFile")
-			err = http.ListenAndServe(addr, registry.Router)
-		}
-
-		if err != nil {
-			util.LogFatal(contextLog, err, "failed to listen and serve")
+		if err := registry.Start(); err != nil {
+			util.LogFatal(contextLog, err, "failed to start registry")
 		}
 	},
 }
