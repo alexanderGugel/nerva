@@ -28,41 +28,41 @@ import (
 	"runtime"
 )
 
-// PackageStats contains information about the underlying git repo of a package.
-type PackageStats struct {
-	Remotes []*PackageRemote `json:"remotes"`
+// PkgStats contains information about the underlying git repo of a package.
+type PkgStats struct {
+	Remotes []*PkgRemote `json:"remotes"`
 }
 
-// PackageRemote is the equivalent to `git remote -v`.
-type PackageRemote struct {
+// PkgRemote is the equivalent to `git remote -v`.
+type PkgRemote struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
 
-// NewPackageStats create a package stats object, which contains information
+// NewPkgStats create a package stats object, which contains information
 // about the underlying git repository.
-func NewPackageStats(repo *git.Repository) (*PackageStats, error) {
+func NewPkgStats(repo *git.Repository) (*PkgStats, error) {
 	names, err := repo.Remotes.List()
 	if err != nil {
 		return nil, err
 	}
-	remotes := []*PackageRemote{}
+	remotes := []*PkgRemote{}
 	for _, name := range names {
 		remote, err := repo.Remotes.Lookup(name)
 		if err != nil {
 			return nil, err
 		}
 		url := remote.Url()
-		remotes = append(remotes, &PackageRemote{name, url})
+		remotes = append(remotes, &PkgRemote{name, url})
 	}
-	stats := &PackageStats{remotes}
+	stats := &PkgStats{remotes}
 	return stats, nil
 }
 
-// HandlePackageStats retrieves the current memory stats.
-func HandlePackageStats(repo *git.Repository,
+// HandlePkgStats retrieves the current memory stats.
+func HandlePkgStats(repo *git.Repository,
 	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
-	res, err := NewPackageStats(repo)
+	res, err := NewPkgStats(repo)
 	if err != nil {
 		return err
 	}
@@ -95,5 +95,5 @@ func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
 		return util.RespondJSON(w, http.StatusBadRequest, res)
 	}
 
-	return r.repoHandler(HandlePackageStats)(w, req, ps)
+	return r.repoHandler(HandlePkgStats)(w, req, ps)
 }

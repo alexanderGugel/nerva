@@ -28,8 +28,8 @@ import (
 	"net/http"
 )
 
-// HandlePackageDownload handles package downloads.
-func (r *Registry) HandlePackageDownload(repo *git.Repository,
+// HandlePkgDownload handles package downloads.
+func (r *Registry) HandlePkgDownload(repo *git.Repository,
 	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
 	version := ps.ByName("version")
 

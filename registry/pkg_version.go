@@ -26,7 +26,7 @@ import (
 	"github.com/libgit2/git2go"
 )
 
-// PackageVersion represents a specific version of a package, typically its
+// PkgVersion represents a specific version of a package, typically its
 // package.json file.
 // The Package Version Object is almost identical to the Package Descriptor
 // object described in the CommonJS Packages specification. For the purposes of
@@ -43,32 +43,31 @@ import (
 // package contents (including the package.json file in the root of said
 // folder).
 // See http://wiki.commonjs.org/wiki/Packages/Registry#Package_Version_Object
-type PackageVersion map[string]interface{}
+type PkgVersion map[string]interface{}
 
-// ManifestFileName is the filename of the repository's manifest file, typically
+// ManifestFilename is the filename of the repository's manifest file, typically
 // the package.json file.
-const ManifestFileName = "package.json"
+const ManifestFilename = "package.json"
 
-// NewPackageVersion creates a package root object (package.json) from a given
+// NewPkgVersion creates a package root object (package.json) from a given
 // Git Object id.
-func NewPackageVersion(repo *git.Repository, id *git.Oid) (
-	*PackageVersion, error) {
+func NewPkgVersion(repo *git.Repository, id *git.Oid) (*PkgVersion, error) {
 	tree, err := storage.PeelTree(repo, id)
 	if err != nil || tree == nil {
 		return nil, err
 	}
 
-	entry := tree.EntryByName(ManifestFileName)
+	entry := tree.EntryByName(ManifestFilename)
 	blob, err := repo.LookupBlob(entry.Id)
 	if err != nil || blob == nil {
 		return nil, err
 	}
 
 	contents := blob.Contents()
-	packageVersion := &PackageVersion{}
-	if err := json.Unmarshal(contents, packageVersion); err != nil {
+	pkgVersion := &PkgVersion{}
+	if err := json.Unmarshal(contents, pkgVersion); err != nil {
 		return nil, err
 	}
 
-	return packageVersion, nil
+	return pkgVersion, nil
 }

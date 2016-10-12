@@ -21,23 +21,35 @@
 package registry
 
 import (
+	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"net/url"
 	"path"
 )
 
-// Upstream represents an external registry.
+// Upstream represents an external registry. It provides a caching layer for
+// frequently requested packages.
 type Upstream struct {
 	URL *url.URL
 }
 
 // NewUpstream instantiates a new registry proxy.
 func NewUpstream(rootURL string) (*Upstream, error) {
-	urlURL, err := url.Parse(rootURL)
+	u, err := url.Parse(rootURL)
 	if err != nil {
 		return nil, err
 	}
-	return &Upstream{urlURL}, nil
+	return &Upstream{u}, nil
+}
+
+// Proxy proxies a specific document hosted on the upstream registry.
+func (u *Upstream) Proxy(w http.ResponseWriter, req *http.Request,
+	ps httprouter.Params) error {
+
+	url := *u.URL
+	url.Path = path.Join(url.Path, req.URL.Path)
+
+	return nil
 }
 
 // RedirectPackageRoot redirects the client to the package root of the package

@@ -20,6 +20,6 @@
 
 package registry
 
-// PackageRootVersions represents the versions map in a package root document
+// PkgRootVersions represents the versions map in a package root document
 // that will be served when clients request a specific package, but no version.
-type PackageRootVersions map[string]*PackageVersion
+type PkgRootVersions map[string]*PkgVersion

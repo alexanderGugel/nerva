@@ -40,6 +40,7 @@ var registryCmd = &cobra.Command{
 		upstreamURL := viper.GetString("backend.upstreamURL")
 		shaCacheSize := viper.GetInt("cache.shaCacheSize")
 		addr := viper.GetString("listener.addr")
+		frontAddr := viper.GetString("listener.frontAddr")
 		certFile := viper.GetString("listener.certFile")
 		keyFile := viper.GetString("listener.keyFile")
 
@@ -47,17 +48,13 @@ var registryCmd = &cobra.Command{
 			"storageDir":   storageDir,
 			"upstreamURL":  upstreamURL,
 			"addr":         addr,
+			"frontAddr":    frontAddr,
 			"certFile":     certFile,
 			"keyFile":      keyFile,
 			"shaCacheSize": shaCacheSize,
 		})
 
-		if (certFile != "" || keyFile != "") &&
-			(certFile == "" || keyFile == "") {
-			contextLog.Fatal("missing keyFile or certFile")
-		}
-
-		registry, err := registry.New(registry.Config{
+		registryConfig := &registry.Config{
 			StorageDir:   storageDir,
 			UpstreamURL:  upstreamURL,
 			ShaCacheSize: shaCacheSize,
@@ -65,7 +62,8 @@ var registryCmd = &cobra.Command{
 			CertFile:     certFile,
 			KeyFile:      keyFile,
 			Logger:       log.StandardLogger(),
-		})
+		}
+		registry, err := registry.New(registryConfig)
 		if err != nil {
 			util.LogFatal(contextLog, err, "failed to create registry")
 		}
@@ -79,7 +77,8 @@ var registryCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(registryCmd)
 
-	registryCmd.Flags().String("addr", "127.0.0.1:8200", "address to bind to for listening")
+	registryCmd.Flags().String("addr", ":8200", "address to bind to for listening")
+	registryCmd.Flags().String("frontAddr", "http://127.0.0.1:8200", "full url of front-facing host that nerva will run on")
 	registryCmd.Flags().String("certFile", "", "path to TLS certificate file")
 	registryCmd.Flags().String("keyFile", "", "path to TLS key file")
 
@@ -88,6 +87,7 @@ func init() {
 	registryCmd.Flags().Int("shaCacheSize", 500, "size of SHA1-cache")
 
 	viper.BindPFlag("listener.addr", registryCmd.Flags().Lookup("addr"))
+	viper.BindPFlag("listener.frontAddr", registryCmd.Flags().Lookup("frontAddr"))
 	viper.BindPFlag("listener.certFile", registryCmd.Flags().Lookup("certFile"))
 	viper.BindPFlag("listener.keyFile", registryCmd.Flags().Lookup("keyFile"))
 

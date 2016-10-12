@@ -23,6 +23,8 @@
 package registry
 
 import (
+	"errors"
+	log "github.com/Sirupsen/logrus"
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
 	"github.com/julienschmidt/httprouter"
@@ -37,11 +39,15 @@ type Registry struct {
 	Storage  *storage.Storage
 	Upstream *Upstream
 	ShaCache *storage.ShaCache
-	Config   Config
+	Config   *Config
 }
 
 // New create a new CommonJS registry.
-func New(config Config) (*Registry, error) {
+func New(config *Config) (*Registry, error) {
+	if config == nil {
+		return nil, errors.New("missing config")
+	}
+
 	upstream, err := NewUpstream(config.UpstreamURL)
 	if err != nil {
 		return nil, err
@@ -64,21 +70,11 @@ func New(config Config) (*Registry, error) {
 	return registry, nil
 }
 
-func (r *Registry) isTLSEnabled() bool {
-	return r.Config.CertFile != "" && r.Config.KeyFile != ""
-}
-
-func (r *Registry) getScheme() string {
-	if r.isTLSEnabled() {
-		return "https"
-	}
-	return "http"
-}
-
 // Start starts the registry.
 func (r *Registry) Start() error {
 	c := r.Config
-	if r.isTLSEnabled() {
+	c.Logger.WithFields(log.Fields{"config": *c}).Info("starting registry")
+	if c.CertFile != "" && c.KeyFile != "" {
 		return http.ListenAndServeTLS(c.Addr, c.CertFile, c.KeyFile, r.Router)
 	}
 	return http.ListenAndServe(c.Addr, r.Router)
@@ -88,14 +84,14 @@ func (r *Registry) attachRoutes() {
 	r.Router.GET("/", r.handleErr(r.HandleRoot))
 
 	r.Router.GET("/:name", r.handleErr(r.repoHandler(r.HandlePackageRoot)))
-	r.Router.GET("/:name/-/:version", r.handleErr(r.repoHandler(r.HandlePackageDownload)))
+	r.Router.GET("/:name/-/:version", r.handleErr(r.repoHandler(r.HandlePkgDownload)))
 
 	r.Router.GET("/:name/ping", r.handleErr(r.HandlePing))
 	r.Router.GET("/:name/stats", r.handleErr(r.HandleStats))
 }
 
 // ErrHandle is a custom HTTP handle that can optionally return an error.
-type ErrHandle func(w http.ResponseWriter, r *http.Request,
+type ErrHandle func(w http.ResponseWriter, req *http.Request,
 	ps httprouter.Params) error
 
 func (r *Registry) handleErr(handler ErrHandle) httprouter.Handle {
@@ -140,7 +136,6 @@ func (r *Registry) repoHandler(handle repoHandle) ErrHandle {
 			return util.RespondJSON(w, http.StatusNotFound, res)
 		}
 
-		r.Upstream.RedirectPackageRoot(name, w, req)
-		return nil
+		return r.Upstream.Proxy(w, req, ps)
 	}
 }

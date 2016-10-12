@@ -21,16 +21,17 @@
 package registry
 
 import (
-	log "github.com/Sirupsen/logrus"
+  log "github.com/Sirupsen/logrus"
 )
 
 // Config represents the configuration options of registry.
 type Config struct {
-	StorageDir   string
-	UpstreamURL  string
-	ShaCacheSize int
-	Addr         string
-	CertFile     string
-	KeyFile      string
-	Logger       *log.Logger
+  StorageDir   string
+  UpstreamURL  string
+  ShaCacheSize int
+  Addr         string
+  CertFile     string
+  KeyFile      string
+  FrontAddr    string
+  Logger       *log.Logger `json:"-"`
 }
