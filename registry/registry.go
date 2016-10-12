@@ -85,19 +85,38 @@ func (r *Registry) Start() error {
 }
 
 func (r *Registry) attachRoutes() {
-	r.Router.GET("/", util.ErrHandler(r.HandleRoot))
+	r.Router.GET("/", r.handleErr(r.HandleRoot))
 
-	r.Router.GET("/:name", util.ErrHandler(r.repoHandler(r.HandlePackageRoot)))
-	r.Router.GET("/:name/-/:version", util.ErrHandler(r.repoHandler(r.HandlePackageDownload)))
+	r.Router.GET("/:name", r.handleErr(r.repoHandler(r.HandlePackageRoot)))
+	r.Router.GET("/:name/-/:version", r.handleErr(r.repoHandler(r.HandlePackageDownload)))
 
-	r.Router.GET("/:name/ping", util.ErrHandler(r.HandlePing))
-	r.Router.GET("/:name/stats", util.ErrHandler(r.HandleStats))
+	r.Router.GET("/:name/ping", r.handleErr(r.HandlePing))
+	r.Router.GET("/:name/stats", r.handleErr(r.HandleStats))
+}
+
+// ErrHandle is a custom HTTP handle that can optionally return an error.
+type ErrHandle func(w http.ResponseWriter, r *http.Request,
+	ps httprouter.Params) error
+
+func (r *Registry) handleErr(handler ErrHandle) httprouter.Handle {
+	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		err := handler(w, req, ps)
+		if err == nil {
+			return
+		}
+		contextLog := r.Config.Logger.WithFields(util.GetRequestFields(req))
+		util.LogErr(contextLog, err, "handler failed")
+		res := &util.ErrorResponse{"internal server error", "unexpected internal error"}
+		if err := util.RespondJSON(w, http.StatusInternalServerError, res); err != nil {
+			util.LogErr(contextLog, err, "failed to write response")
+		}
+	}
 }
 
 type repoHandle func(repo *git.Repository, w http.ResponseWriter,
 	req *http.Request, ps httprouter.Params) error
 
-func (r *Registry) repoHandler(handle repoHandle) util.ErrHandle {
+func (r *Registry) repoHandler(handle repoHandle) ErrHandle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
 		name := ps.ByName("name")
 

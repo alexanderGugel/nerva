@@ -20,6 +20,10 @@
 
 package registry
 
+import (
+	log "github.com/Sirupsen/logrus"
+)
+
 // Config represents the configuration options of registry.
 type Config struct {
 	StorageDir   string
@@ -28,4 +32,5 @@ type Config struct {
 	Addr         string
 	CertFile     string
 	KeyFile      string
+	Logger       *log.Logger
 }

@@ -64,6 +64,7 @@ var registryCmd = &cobra.Command{
 			Addr:         addr,
 			CertFile:     certFile,
 			KeyFile:      keyFile,
+			Logger:       log.StandardLogger(),
 		})
 		if err != nil {
 			util.LogFatal(contextLog, err, "failed to create registry")

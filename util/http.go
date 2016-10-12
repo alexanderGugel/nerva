@@ -54,7 +54,8 @@ type ErrHandle func(w http.ResponseWriter, r *http.Request,
 func ErrHandler(handler ErrHandle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		if err := handler(w, req, ps); err != nil {
-			contextLog := RequestContext(req)
+			contextLog := log.WithFields(GetRequestFields(req))
+
 			LogErr(contextLog, err, "handler failed")
 			res := &ErrorResponse{"internal server error", "unexpected internal error"}
 			if err := RespondJSON(w, http.StatusInternalServerError, res); err != nil {

@@ -89,5 +89,11 @@ func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
 	if name == "-" {
 		return HandleMemStats(w, req, ps)
 	}
-	return util.ValidatePropHandler("name", r.repoHandler(HandlePackageStats))(w, req, ps)
+
+	if !util.IsValid(name) {
+		res := &util.ErrorResponse{"bad request", "invalid name"}
+		return util.RespondJSON(w, http.StatusBadRequest, res)
+	}
+
+	return r.repoHandler(HandlePackageStats)(w, req, ps)
 }

@@ -22,7 +22,6 @@ package util
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
 
@@ -41,20 +40,12 @@ func LogFatal(ctx *log.Entry, err error, reason string) {
 	ctx.WithFields(log.Fields{"error": err}).Fatal(reason)
 }
 
-// RequestContext creates a new context used for logging from a plain HTTP
+// GetRequestFields creates new fields for logging based on the supplied HTTP
 // request.
-func RequestContext(req *http.Request) *log.Entry {
-	return log.WithFields(log.Fields{
+func GetRequestFields(req *http.Request) log.Fields {
+	return log.Fields{
 		"RemoteAddr": req.RemoteAddr,
 		"RequestURI": req.RequestURI,
 		"URL":        req.URL,
-	})
-}
-
-// LogRequest logs an incoming HTTP request.
-func LogRequest(handle httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		RequestContext(req).Info("request")
-		handle(w, req, ps)
 	}
 }
