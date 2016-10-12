@@ -21,8 +21,11 @@
 package registry
 
 import (
-    "github.com/alexanderGugel/nerva/storage"
-    "path"
+	"github.com/alexanderGugel/nerva/storage"
+	"github.com/alexanderGugel/nerva/util"
+	"github.com/julienschmidt/httprouter"
+	"net/http"
+	"path"
 )
 
 // Root maps package names to package root descriptors. In this context,
@@ -46,10 +49,33 @@ type Root map[string]string
 // storage directory by reading in the repositories that are available in the
 // storage dir.
 func NewRootFromStorage(storage *storage.Storage, url string) (*Root, error) {
-    root := Root{}
-    names, _ := storage.Ls()
-    for _, name := range names {
-        root[name] = path.Join(url, name)
-    }
-    return &root, nil
+	root := Root{}
+	names, _ := storage.Ls()
+	for _, name := range names {
+		root[name] = path.Join(url, name)
+	}
+	return &root, nil
+}
+
+// HandleRoot handles requests to the registry root URL.
+// The root URL is the base of the package registry. Given this url, a name, and
+// a version, a package can be uniquely identified, assuming it exists in the
+// registry.
+// When requested, the registry root URL SHOULD return a list of packages in the
+// registry in the form of a hash of package names to package root descriptors.
+// The package root descriptor MUST be either: an Object that would be valid for
+// the “package root url” contents for the named package, or a string URL that
+// should be used as the package root url.
+// In the case of a string URL, it MAY refer to a different registry. In that
+// case, a request for {registry root url}/{package name} SHOULD be EITHER a 301
+// or 302 redirect to the same URL as named in the string value, OR a valid
+// “package root url” response.
+// See http://wiki.commonjs.org/wiki/Packages/Registry#registry_root_url
+func (r *Registry) HandleRoot(w http.ResponseWriter, req *http.Request,
+	_ httprouter.Params) error {
+	res, err := NewRootFromStorage(r.Storage, req.Host)
+	if err != nil {
+		return err
+	}
+	return util.RespondJSON(w, 200, res)
 }

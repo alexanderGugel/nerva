@@ -21,13 +21,16 @@
 package registry
 
 import (
-    "crypto/sha1"
-    "encoding/hex"
-    log "github.com/Sirupsen/logrus"
-    "github.com/alexanderGugel/nerva/storage"
-    "github.com/alexanderGugel/nerva/util"
-    "github.com/libgit2/git2go"
-    "regexp"
+	"crypto/sha1"
+	"encoding/hex"
+	log "github.com/Sirupsen/logrus"
+	"github.com/alexanderGugel/nerva/storage"
+	"github.com/alexanderGugel/nerva/util"
+	"github.com/julienschmidt/httprouter"
+	"github.com/libgit2/git2go"
+	"net/http"
+	"net/url"
+	"regexp"
 )
 
 // PackageRoot represents a CommonJS package root document containing all
@@ -45,9 +48,9 @@ import (
 // url” responses: either URL strings or package descriptor objects.
 // See http://wiki.commonjs.org/wiki/Packages/Registry#Package_Root_Object
 type PackageRoot struct {
-    Name     string               `json:"name"`
-    DistTags *PackageDistTags     `json:"dist-tags"`
-    Versions *PackageRootVersions `json:"versions"`
+	Name     string               `json:"name"`
+	DistTags *PackageDistTags     `json:"dist-tags"`
+	Versions *PackageRootVersions `json:"versions"`
 }
 
 // PackageDistTags represents the dist-tags of a package root object. It maps
@@ -56,65 +59,90 @@ type PackageDistTags map[string]string
 
 // PackageDist describes how a package can be downloaded.
 type PackageDist struct {
-    Tarball string `json:"tarball"`
-    Shasum  string `json:"shasum"`
+	Tarball string `json:"tarball"`
+	Shasum  string `json:"shasum"`
 }
 
 var versionTagRef = regexp.MustCompile("^refs\\/tags\\/v(.*)$")
 
 // NewPackageRoot creates a new CommonJS package root document.
-func NewPackageRoot(name string, url string, repo *git.Repository, shaCache *ShaCache) (*PackageRoot, error) {
-    versions := PackageRootVersions{}
-    contextLog := log.WithFields(log.Fields{"name": name})
+func NewPackageRoot(name string, url string, repo *git.Repository,
+	shaCache *storage.ShaCache) (*PackageRoot, error) {
+	versions := PackageRootVersions{}
+	contextLog := log.WithFields(log.Fields{"name": name})
 
-    latest := ""
+	latest := ""
 
-    repo.Tags.Foreach(func(tagRef string, id *git.Oid) error {
-        contextLog := contextLog.WithFields(log.Fields{"tagRef": tagRef})
+	if err := repo.Tags.Foreach(func(tagRef string, id *git.Oid) error {
+		contextLog := contextLog.WithFields(log.Fields{"tagRef": tagRef})
 
-        if !versionTagRef.MatchString(tagRef) {
-            contextLog.Debug("skipping non-version tag")
-            return nil
-        }
+		if !versionTagRef.MatchString(tagRef) {
+			contextLog.Debug("skipping non-version tag")
+			return nil
+		}
 
-        packageVersion, err := NewPackageVersion(repo, id)
-        contextLog = contextLog.WithFields(log.Fields{"packageVersion": packageVersion})
-        if err != nil || packageVersion == nil {
-            util.LogErr(contextLog, err, "failed to generate package version")
-            return nil
-        } else if version, ok := (*packageVersion)["version"].(string); ok {
-            contextLog = contextLog.WithFields(log.Fields{"version": version})
-            if versions[version] != nil {
-                contextLog.Warn("duplicate version")
-            }
-            tarball := "http://" + url + "/" + name + "/-/" + id.String()
+		packageVersion, err := NewPackageVersion(repo, id)
+		contextLog = contextLog.WithFields(log.Fields{"packageVersion": packageVersion})
+		if err != nil || packageVersion == nil {
+			util.LogErr(contextLog, err, "failed to generate package version")
+			return nil
+		}
+		if version, ok := (*packageVersion)["version"].(string); ok {
+			contextLog = contextLog.WithFields(log.Fields{"version": version})
+			if versions[version] != nil {
+				contextLog.Warn("duplicate version")
+			}
+			tarball := url + "/" + name + "/-/" + id.String()
 
-            shasum, ok := shaCache.Get(*id)
-            if !ok {
-                hasher := sha1.New()
-                d, err := storage.NewDownload(repo, id)
-                if err != nil || d == nil {
-                    util.LogErr(contextLog, err, "failed to create download")
-                    return nil
-                }
-                if err := d.Start(hasher); err != nil {
-                    util.LogErr(contextLog, err, "failed to start download")
-                }
-                shasum = hex.EncodeToString(hasher.Sum(nil))
-            }
+			shasum, ok := shaCache.Get(*id)
+			if !ok {
+				hasher := sha1.New()
+				d, err := storage.NewDownload(repo, id)
+				if err != nil || d == nil {
+					util.LogErr(contextLog, err, "failed to create download")
+					return nil
+				}
+				if err := d.Start(hasher); err != nil {
+					util.LogErr(contextLog, err, "failed to start download")
+					return nil
+				}
+				shasum = hex.EncodeToString(hasher.Sum(nil))
+			}
 
-            shaCache.Add(*id, shasum)
-            (*packageVersion)["dist"] = &PackageDist{tarball, shasum}
-            versions[version] = packageVersion
-            latest = version
-        }
-        return nil
-    })
+			shaCache.Add(*id, shasum)
+			(*packageVersion)["dist"] = &PackageDist{tarball, shasum}
+			versions[version] = packageVersion
+			latest = version
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
 
-    distTags := PackageDistTags{}
-    if latest != "" {
-        distTags["latest"] = latest
-    }
-    packageRoot := &PackageRoot{name, &distTags, &versions}
-    return packageRoot, nil
+	distTags := PackageDistTags{}
+	if latest != "" {
+		distTags["latest"] = latest
+	}
+	packageRoot := &PackageRoot{name, &distTags, &versions}
+	return packageRoot, nil
+}
+
+// HandlePackageRoot handles requests to the package root URL.
+// The package root url is the base URL where a client can get top-level
+// information about a package and all of the versions known to the registry.
+// A valid “package root url” response MUST be returned when the client requests
+// {registry root url}/{package name}.
+// See http://wiki.commonjs.org/wiki/Packages/Registry#package_root_url
+func (r *Registry) HandlePackageRoot(repo *git.Repository,
+	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+	name := ps.ByName("name")
+	var url url.URL
+	url.Host = req.Host
+	url.Scheme = "http"
+
+	res, err := NewPackageRoot(name, url.String(), repo, r.ShaCache)
+	if err != nil {
+		return err
+	}
+	return util.RespondJSON(w, 200, res)
 }

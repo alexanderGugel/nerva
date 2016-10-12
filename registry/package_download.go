@@ -21,30 +21,35 @@
 package registry
 
 import (
+	"github.com/alexanderGugel/nerva/storage"
+	"github.com/alexanderGugel/nerva/util"
+	"github.com/julienschmidt/httprouter"
+	"github.com/libgit2/git2go"
 	"net/http"
-	"net/url"
-	"path"
 )
 
-// Upstream represents an external registry.
-type Upstream struct {
-	URL *url.URL
-}
+// HandlePackageDownload handles package downloads.
+func (r *Registry) HandlePackageDownload(repo *git.Repository,
+	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+	version := ps.ByName("version")
 
-// NewUpstream instantiates a new registry proxy.
-func NewUpstream(rootURL string) (*Upstream, error) {
-	urlURL, err := url.Parse(rootURL)
-	if err != nil {
-		return nil, err
+	id, err := git.NewOid(version)
+	if err != nil || id == nil {
+		res := &util.ErrorResponse{
+			"bad request",
+			"version is not a valid git object id",
+		}
+		return util.RespondJSON(w, http.StatusBadRequest, res)
 	}
-	return &Upstream{urlURL}, nil
-}
 
-// RedirectPackageRoot redirects the client to the package root of the package
-// with the specified name.
-func (u *Upstream) RedirectPackageRoot(name string, w http.ResponseWriter,
-	req *http.Request) {
-	url := *u.URL
-	url.Path = path.Join(url.Path, name)
-	http.Redirect(w, req, url.String(), http.StatusMovedPermanently)
+	d, err := storage.NewDownload(repo, id)
+	if err != nil || d == nil {
+		if gitErr, ok := err.(*git.GitError); !ok ||
+			gitErr.Class != git.ErrClassOdb {
+			return err
+		}
+		res := &util.ErrorResponse{"not found", "package not found"}
+		return util.RespondJSON(w, http.StatusNotFound, res)
+	}
+	return d.Start(w)
 }

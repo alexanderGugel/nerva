@@ -21,9 +21,9 @@
 package registry
 
 import (
-    "encoding/json"
-    "github.com/alexanderGugel/nerva/storage"
-    "github.com/libgit2/git2go"
+	"encoding/json"
+	"github.com/alexanderGugel/nerva/storage"
+	"github.com/libgit2/git2go"
 )
 
 // PackageVersion represents a specific version of a package, typically its
@@ -45,25 +45,30 @@ import (
 // See http://wiki.commonjs.org/wiki/Packages/Registry#Package_Version_Object
 type PackageVersion map[string]interface{}
 
+// ManifestFileName is the filename of the repository's manifest file, typically
+// the package.json file.
+const ManifestFileName = "package.json"
+
 // NewPackageVersion creates a package root object (package.json) from a given
 // Git Object id.
-func NewPackageVersion(repo *git.Repository, id *git.Oid) (*PackageVersion, error) {
-    tree, err := storage.PeelTree(repo, id)
-    if err != nil || tree == nil {
-        return nil, err
-    }
+func NewPackageVersion(repo *git.Repository, id *git.Oid) (
+	*PackageVersion, error) {
+	tree, err := storage.PeelTree(repo, id)
+	if err != nil || tree == nil {
+		return nil, err
+	}
 
-    entry := tree.EntryByName("package.json")
-    blob, err := repo.LookupBlob(entry.Id)
-    if err != nil || blob == nil {
-        return nil, err
-    }
+	entry := tree.EntryByName(ManifestFileName)
+	blob, err := repo.LookupBlob(entry.Id)
+	if err != nil || blob == nil {
+		return nil, err
+	}
 
-    contents := blob.Contents()
-    packageVersion := &PackageVersion{}
-    if err := json.Unmarshal(contents, packageVersion); err != nil {
-        return nil, err
-    }
+	contents := blob.Contents()
+	packageVersion := &PackageVersion{}
+	if err := json.Unmarshal(contents, packageVersion); err != nil {
+		return nil, err
+	}
 
-    return packageVersion, nil
+	return packageVersion, nil
 }

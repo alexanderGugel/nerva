@@ -18,40 +18,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package registry
+package storage
 
 import (
-  "github.com/hashicorp/golang-lru"
-  "github.com/libgit2/git2go"
+	"github.com/hashicorp/golang-lru"
+	"github.com/libgit2/git2go"
 )
 
 // ShaCache serves as an adapter for an immutable LRU cache. Git object ids
 // are cryptographically unique, therefore there is no need to "manually" remove
 // items from the underlying LRU cache.
 type ShaCache struct {
-  lru *lru.Cache
+	lru *lru.Cache
 }
 
 // NewShaCache creates a new LRU cache used for mapping Git object ids to
 // respective SHA1 sums.
 func NewShaCache(size int) (*ShaCache, error) {
-  lru, err := lru.New(size)
-  if err != nil {
-    return nil, err
-  }
-  return &ShaCache{lru}, nil
+	lru, err := lru.New(size)
+	if err != nil {
+		return nil, err
+	}
+	return &ShaCache{lru}, nil
 }
 
 // Add populates the cache with the given Git object id.
 func (c *ShaCache) Add(id git.Oid, shasum string) bool {
-  return c.lru.Add(id, shasum)
+	return c.lru.Add(id, shasum)
 }
 
 // Get retrieves the corresponding SHA sum for the supplied Git object id.
 func (c *ShaCache) Get(id git.Oid) (string, bool) {
-  shasum, ok := c.lru.Get(id)
-  if !ok {
-	  return "", false
-  }
-  return shasum.(string), ok
+	shasum, ok := c.lru.Get(id)
+	if !ok {
+		return "", false
+	}
+	return shasum.(string), ok
 }

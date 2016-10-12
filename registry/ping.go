@@ -20,11 +20,24 @@
 
 package registry
 
+import (
+	"github.com/alexanderGugel/nerva/util"
+	"github.com/julienschmidt/httprouter"
+	"net/http"
+)
+
 // Ping represents the response to a ping request. Ping is simply an empty
 // object used by npm ping.
 type Ping struct{}
 
 // NewPing creates a new ping object.
 func NewPing() *Ping {
-    return &Ping{}
+	return &Ping{}
+}
+
+// HandlePing responds with an empty JSON object. npm's ping command hits this
+// endpoint.
+func (*Registry) HandlePing(w http.ResponseWriter, req *http.Request,
+	_ httprouter.Params) error {
+	return util.RespondJSON(w, 200, NewPing())
 }

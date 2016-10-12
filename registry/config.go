@@ -18,33 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Package registry implements a CommonJS compliant package registry.
+// See http://wiki.commonjs.org/wiki/Packages/Registry
 package registry
 
-import (
-	"net/http"
-	"net/url"
-	"path"
-)
-
-// Upstream represents an external registry.
-type Upstream struct {
-	URL *url.URL
-}
-
-// NewUpstream instantiates a new registry proxy.
-func NewUpstream(rootURL string) (*Upstream, error) {
-	urlURL, err := url.Parse(rootURL)
-	if err != nil {
-		return nil, err
-	}
-	return &Upstream{urlURL}, nil
-}
-
-// RedirectPackageRoot redirects the client to the package root of the package
-// with the specified name.
-func (u *Upstream) RedirectPackageRoot(name string, w http.ResponseWriter,
-	req *http.Request) {
-	url := *u.URL
-	url.Path = path.Join(url.Path, name)
-	http.Redirect(w, req, url.String(), http.StatusMovedPermanently)
+// Config represents the configuration options of registry.
+type Config struct {
+	StorageDir   string
+	UpstreamURL  string
+	ShaCacheSize int
 }

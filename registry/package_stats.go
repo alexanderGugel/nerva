@@ -20,35 +20,74 @@
 
 package registry
 
-import "github.com/libgit2/git2go"
+import (
+	"github.com/alexanderGugel/nerva/util"
+	"github.com/julienschmidt/httprouter"
+	"github.com/libgit2/git2go"
+	"net/http"
+	"runtime"
+)
 
 // PackageStats contains information about the underlying git repo of a package.
 type PackageStats struct {
-    Remotes []*PackageRemote `json:"remotes"`
+	Remotes []*PackageRemote `json:"remotes"`
 }
 
 // PackageRemote is the equivalent to `git remote -v`.
 type PackageRemote struct {
-    Name string `json:"name"`
-    URL  string `json:"url"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 // NewPackageStats create a package stats object, which contains information
 // about the underlying git repository.
 func NewPackageStats(repo *git.Repository) (*PackageStats, error) {
-    names, err := repo.Remotes.List()
-    if err != nil {
-        return nil, err
-    }
-    remotes := []*PackageRemote{}
-    for _, name := range names {
-        remote, err := repo.Remotes.Lookup(name)
-        if err != nil {
-            return nil, err
-        }
-        url := remote.Url()
-        remotes = append(remotes, &PackageRemote{name, url})
-    }
-    stats := &PackageStats{remotes}
-    return stats, nil
+	names, err := repo.Remotes.List()
+	if err != nil {
+		return nil, err
+	}
+	remotes := []*PackageRemote{}
+	for _, name := range names {
+		remote, err := repo.Remotes.Lookup(name)
+		if err != nil {
+			return nil, err
+		}
+		url := remote.Url()
+		remotes = append(remotes, &PackageRemote{name, url})
+	}
+	stats := &PackageStats{remotes}
+	return stats, nil
+}
+
+// HandlePackageStats retrieves the current memory stats.
+func HandlePackageStats(repo *git.Repository,
+	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+	res, err := NewPackageStats(repo)
+	if err != nil {
+		return err
+	}
+	return util.RespondJSON(w, 200, res)
+}
+
+// NewMemStats aggregates and returns memory stats.
+func NewMemStats() *runtime.MemStats {
+	var m = new(runtime.MemStats)
+	runtime.ReadMemStats(m)
+	return m
+}
+
+// HandleMemStats retrieves the current memory stats.
+func HandleMemStats(w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+	res := NewMemStats()
+	return util.RespondJSON(w, 200, res)
+}
+
+// HandleStats retrieves the current memory stats.
+func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
+	ps httprouter.Params) error {
+	name := ps.ByName("name")
+	if name == "-" {
+		return HandleMemStats(w, req, ps)
+	}
+	return util.ValidatePropHandler("name", r.repoHandler(HandlePackageStats))(w, req, ps)
 }

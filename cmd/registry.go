@@ -61,7 +61,11 @@ var registryCmd = &cobra.Command{
 
 		contextLog.Info("starting registry")
 
-		registry, err := registry.New(storageDir, upstreamURL, shaCacheSize)
+		registry, err := registry.New(registry.Config{
+			StorageDir:   storageDir,
+			UpstreamURL:  upstreamURL,
+			ShaCacheSize: shaCacheSize,
+		})
 		if err != nil {
 			util.LogFatal(contextLog, err, "failed to instantiate registry")
 		}

@@ -21,54 +21,54 @@
 package util
 
 import (
-    "net/http"
-    "net/http/httptest"
-    "testing"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 func TestRespondJSONCode(t *testing.T) {
-    w := httptest.NewRecorder()
-    wantCode := http.StatusTeapot
-    RespondJSON(w, wantCode, nil)
+	w := httptest.NewRecorder()
+	wantCode := http.StatusTeapot
+	RespondJSON(w, wantCode, nil)
 
-    if gotCode := w.Code; gotCode != wantCode {
-        t.Errorf("w.Code = %v want %v", gotCode, wantCode)
-    }
+	if gotCode := w.Code; gotCode != wantCode {
+		t.Errorf("w.Code = %v want %v", gotCode, wantCode)
+	}
 }
 
 func TestRespondJSONContentType(t *testing.T) {
-    w := httptest.NewRecorder()
-    RespondJSON(w, http.StatusTeapot, nil)
+	w := httptest.NewRecorder()
+	RespondJSON(w, http.StatusTeapot, nil)
 
-    wantContentType := "application/json; charset=utf-8"
-    if gotContentType := w.Header().Get("Content-Type"); gotContentType != wantContentType {
-        t.Errorf("w.Header().Get(\"Content-Type\") = %v want %v", gotContentType, wantContentType)
-    }
+	wantContentType := "application/json; charset=utf-8"
+	if gotContentType := w.Header().Get("Content-Type"); gotContentType != wantContentType {
+		t.Errorf("w.Header().Get(\"Content-Type\") = %v want %v", gotContentType, wantContentType)
+	}
 }
 
 func TestRespondJSONSuccess(t *testing.T) {
-    w := httptest.NewRecorder()
-    if err := RespondJSON(w, http.StatusTeapot, nil); err != nil {
-        t.Errorf("RespondJSON(%q, %q, %q) should not err: %v", w, http.StatusTeapot, nil, err)
-    }
+	w := httptest.NewRecorder()
+	if err := RespondJSON(w, http.StatusTeapot, nil); err != nil {
+		t.Errorf("RespondJSON(%q, %q, %q) should not err: %v", w, http.StatusTeapot, nil, err)
+	}
 }
 
 func TestRespondJSONNonStringKeys(t *testing.T) {
-    w := httptest.NewRecorder()
-    data := map[int]string{1: ""}
-    if err := RespondJSON(w, http.StatusTeapot, data); err == nil {
-        t.Errorf("RespondJSON(%q, %q, %q) should err", w, http.StatusTeapot, nil)
-    }
+	w := httptest.NewRecorder()
+	data := map[int]string{1: ""}
+	if err := RespondJSON(w, http.StatusTeapot, data); err == nil {
+		t.Errorf("RespondJSON(%q, %q, %q) should err", w, http.StatusTeapot, nil)
+	}
 }
 
 func TestRespondJSONBody(t *testing.T) {
-    w := httptest.NewRecorder()
-    data := map[string]string{"hello": "world"}
-    wantBody := "{\"hello\":\"world\"}"
+	w := httptest.NewRecorder()
+	data := map[string]string{"hello": "world"}
+	wantBody := "{\"hello\":\"world\"}"
 
-    RespondJSON(w, http.StatusTeapot, data)
+	RespondJSON(w, http.StatusTeapot, data)
 
-    if gotBody := w.Body.String(); gotBody != wantBody {
-        t.Errorf("w.Body.String() = %v want %v", gotBody, wantBody)
-    }
+	if gotBody := w.Body.String(); gotBody != wantBody {
+		t.Errorf("w.Body.String() = %v want %v", gotBody, wantBody)
+	}
 }
