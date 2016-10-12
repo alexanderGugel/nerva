@@ -10,8 +10,7 @@ go:
  - tip
 
 before_install:
- - rm -rf vendor
  - apt-get install libgit2-dev
 
 script:
- - go test -v ./...
+ - make test
