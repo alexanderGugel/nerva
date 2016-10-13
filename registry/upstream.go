@@ -21,7 +21,9 @@
 package registry
 
 import (
+	"github.com/hashicorp/golang-lru"
 	"github.com/julienschmidt/httprouter"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -30,33 +32,51 @@ import (
 // Upstream represents an external registry. It provides a caching layer for
 // frequently requested packages.
 type Upstream struct {
-	URL *url.URL
+	URL    *url.URL
+	Client *http.Client
 }
 
 // NewUpstream instantiates a new registry proxy.
 func NewUpstream(rootURL string) (*Upstream, error) {
-	u, err := url.Parse(rootURL)
+	urlURL, err := url.Parse(rootURL)
 	if err != nil {
 		return nil, err
 	}
-	return &Upstream{u}, nil
+
+	client := &http.Client{}
+
+	return &Upstream{urlURL, client}, nil
 }
 
-// Proxy proxies a specific document hosted on the upstream registry.
-func (u *Upstream) Proxy(w http.ResponseWriter, req *http.Request,
+// HandleReq redirects the client to the package root of the package
+// with the specified name.
+func (u *Upstream) HandleReq(w http.ResponseWriter, req *http.Request,
 	ps httprouter.Params) error {
 
 	url := *u.URL
 	url.Path = path.Join(url.Path, req.URL.Path)
 
-	return nil
+	req, err := http.NewRequest(req.Method, url.String(), req.Body)
+	if err != nil {
+		return err
+	}
+
+	res, err := u.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	copyHeader(w.Header(), res.Header)
+
+	_, err = io.Copy(w, res.Body)
+	return err
 }
 
-// RedirectPackageRoot redirects the client to the package root of the package
-// with the specified name.
-func (u *Upstream) RedirectPackageRoot(name string, w http.ResponseWriter,
-	req *http.Request) {
-	url := *u.URL
-	url.Path = path.Join(url.Path, name)
-	http.Redirect(w, req, url.String(), http.StatusMovedPermanently)
+// copyHeader copies header pairs from one header to another.
+// See https://golang.org/src/net/http/httputil/reverseproxy.go
+func copyHeader(dst, src http.Header) {
+	for k, vv := range src {
+		for _, v := range vv {
+			dst.Add(k, v)
+		}
+	}
 }

@@ -45,7 +45,7 @@ type Registry struct {
 // New create a new CommonJS registry.
 func New(config *Config) (*Registry, error) {
 	if config == nil {
-		return nil, errors.New("missing config")
+		return nil, errors.New("alexanderGugel/nerva/registry: missing config")
 	}
 
 	upstream, err := NewUpstream(config.UpstreamURL)
@@ -136,6 +136,6 @@ func (r *Registry) repoHandler(handle repoHandle) ErrHandle {
 			return util.RespondJSON(w, http.StatusNotFound, res)
 		}
 
-		return r.Upstream.Proxy(w, req, ps)
+		return r.Upstream.HandleReq(w, req, ps)
 	}
 }
