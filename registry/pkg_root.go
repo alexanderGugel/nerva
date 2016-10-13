@@ -52,6 +52,10 @@ type PackageRoot struct {
     Versions *PkgRootVersions `json:"versions"`
 }
 
+// PkgRootVersions represents the versions map in a package root document
+// that will be served when clients request a specific package, but no version.
+type PkgRootVersions map[string]*PkgVersion
+
 // PackageDistTags represents the dist-tags of a package root object. It maps
 // Common JS tags, such latest, to specific versions.
 type PackageDistTags map[string]string
