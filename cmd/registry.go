@@ -61,6 +61,7 @@ var registryCmd = &cobra.Command{
 			Addr:         addr,
 			CertFile:     certFile,
 			KeyFile:      keyFile,
+			FrontAddr:    frontAddr,
 			Logger:       log.StandardLogger(),
 		}
 		registry, err := registry.New(registryConfig)

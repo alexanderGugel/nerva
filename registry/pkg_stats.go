@@ -95,5 +95,5 @@ func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
 		return util.RespondJSON(w, http.StatusBadRequest, res)
 	}
 
-	return r.repoHandler(HandlePkgStats)(w, req, ps)
+	return r.wrapRepoHandle(HandlePkgStats)(w, req, ps)
 }

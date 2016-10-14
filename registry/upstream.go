@@ -21,7 +21,6 @@
 package registry
 
 import (
-	"github.com/hashicorp/golang-lru"
 	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
@@ -43,9 +42,10 @@ func NewUpstream(rootURL string) (*Upstream, error) {
 		return nil, err
 	}
 
-	client := &http.Client{}
-
-	return &Upstream{urlURL, client}, nil
+	return &Upstream{
+		URL:    urlURL,
+		Client: &http.Client{},
+	}, nil
 }
 
 // HandleReq redirects the client to the package root of the package

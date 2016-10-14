@@ -23,7 +23,6 @@
 package registry
 
 import (
-	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
@@ -44,26 +43,15 @@ type Registry struct {
 
 // New create a new CommonJS registry.
 func New(config *Config) (*Registry, error) {
-	if config == nil {
-		return nil, errors.New("alexanderGugel/nerva/registry: missing config")
-	}
-
-	upstream, err := NewUpstream(config.UpstreamURL)
-	if err != nil {
+	if err := ValidateConfig(config); err != nil {
 		return nil, err
 	}
-
-	shaCache, err := storage.NewShaCache(config.ShaCacheSize)
-	if err != nil {
-		return nil, err
-	}
-
 	registry := &Registry{
-		Router:   httprouter.New(),
-		Storage:  storage.New(config.StorageDir),
-		Upstream: upstream,
-		ShaCache: shaCache,
-		Config:   config,
+		Router: httprouter.New(),
+		Config: config,
+	}
+	if err := registry.init(); err != nil {
+		return nil, err
 	}
 	registry.attachRoutes()
 
@@ -72,29 +60,62 @@ func New(config *Config) (*Registry, error) {
 
 // Start starts the registry.
 func (r *Registry) Start() error {
-	c := r.Config
-	c.Logger.WithFields(log.Fields{"config": *c}).Info("starting registry")
-	if c.CertFile != "" && c.KeyFile != "" {
-		return http.ListenAndServeTLS(c.Addr, c.CertFile, c.KeyFile, r.Router)
+	r.Config.Logger.WithFields(log.Fields{
+		"config": *r.Config,
+	}).Info("starting registry")
+	if r.Config.ShouldUseTLS() {
+		return http.ListenAndServeTLS(
+			r.Config.Addr,
+			r.Config.CertFile,
+			r.Config.KeyFile,
+			r.Router,
+		)
 	}
-	return http.ListenAndServe(c.Addr, r.Router)
+	return http.ListenAndServe(r.Config.Addr, r.Router)
+}
+
+func (r *Registry) init() error {
+	if err := r.initShaCache(); err != nil {
+		return err
+	}
+	if err := r.initUpstream(); err != nil {
+		return err
+	}
+	r.initStorage()
+	return nil
+}
+
+func (r *Registry) initShaCache() error {
+	shaCache, err := storage.NewShaCache(r.Config.ShaCacheSize)
+	r.ShaCache = shaCache
+	return err
+}
+
+func (r *Registry) initUpstream() error {
+	upstream, err := NewUpstream(r.Config.UpstreamURL)
+	r.Upstream = upstream
+	return err
+}
+
+func (r *Registry) initStorage() {
+	r.Storage = storage.New(r.Config.StorageDir)
 }
 
 func (r *Registry) attachRoutes() {
-	r.Router.GET("/", r.handleErr(r.HandleRoot))
+	r.Router.GET("/", r.wrapErrHandle(r.HandleRoot))
 
-	r.Router.GET("/:name", r.handleErr(r.repoHandler(r.HandlePackageRoot)))
-	r.Router.GET("/:name/-/:version", r.handleErr(r.repoHandler(r.HandlePkgDownload)))
+	r.Router.GET("/:name", r.wrapErrHandle(r.wrapRepoHandle(r.HandlePackageRoot)))
+	r.Router.GET("/:name/-/:version", r.wrapErrHandle(r.wrapRepoHandle(r.HandlePkgDownload)))
 
-	r.Router.GET("/:name/ping", r.handleErr(r.HandlePing))
-	r.Router.GET("/:name/stats", r.handleErr(r.HandleStats))
+	r.Router.GET("/:name/ping", r.wrapErrHandle(r.HandlePing))
+	r.Router.GET("/:name/stats", r.wrapErrHandle(r.HandleStats))
 }
 
-// ErrHandle is a custom HTTP handle that can optionally return an error.
-type ErrHandle func(w http.ResponseWriter, req *http.Request,
+// errHandle is a custom HTTP handle that can optionally return an error.
+type errHandle func(w http.ResponseWriter, req *http.Request,
 	ps httprouter.Params) error
 
-func (r *Registry) handleErr(handler ErrHandle) httprouter.Handle {
+func (r *Registry) wrapErrHandle(handler errHandle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		err := handler(w, req, ps)
 		if err == nil {
@@ -112,7 +133,7 @@ func (r *Registry) handleErr(handler ErrHandle) httprouter.Handle {
 type repoHandle func(repo *git.Repository, w http.ResponseWriter,
 	req *http.Request, ps httprouter.Params) error
 
-func (r *Registry) repoHandler(handle repoHandle) ErrHandle {
+func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
 		name := ps.ByName("name")
 

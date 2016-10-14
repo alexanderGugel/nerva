@@ -21,17 +21,46 @@
 package registry
 
 import (
-  log "github.com/Sirupsen/logrus"
+	"errors"
+	log "github.com/Sirupsen/logrus"
 )
 
 // Config represents the configuration options of registry.
 type Config struct {
-  StorageDir   string
-  UpstreamURL  string
-  ShaCacheSize int
-  Addr         string
-  CertFile     string
-  KeyFile      string
-  FrontAddr    string
-  Logger       *log.Logger `json:"-"`
+	StorageDir   string
+	UpstreamURL  string
+	ShaCacheSize int
+	Addr         string
+	CertFile     string
+	KeyFile      string
+	FrontAddr    string
+	Logger       *log.Logger `json:"-"`
+}
+
+// ShouldUseTLS checks if TLS is (partially) configured.
+func (c *Config) ShouldUseTLS() bool {
+	return c.CertFile != "" || c.KeyFile != ""
+}
+
+// ValidateConfig checks if the supplied config is valid.
+func ValidateConfig(c *Config) error {
+	if c == nil {
+		return errors.New("missing config")
+	}
+	if c.Addr == "" {
+		return errors.New("missing Addr")
+	}
+	if c.ShouldUseTLS() && c.CertFile == "" {
+		return errors.New("missing CertFile")
+	}
+	if c.ShouldUseTLS() && c.KeyFile == "" {
+		return errors.New("missing KeyFile")
+	}
+	if c.FrontAddr == "" {
+		return errors.New("missing FrontAddr")
+	}
+	if c.Logger == nil {
+		return errors.New("missing Logger")
+	}
+	return nil
 }
