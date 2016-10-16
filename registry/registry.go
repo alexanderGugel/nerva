@@ -46,13 +46,11 @@ func New(config *Config) (*Registry, error) {
 	if err := ValidateConfig(config); err != nil {
 		return nil, err
 	}
-	registry := &Registry{
-		Router: httprouter.New(),
-		Config: config,
-	}
+	registry := &Registry{Config: config}
 	if err := registry.init(); err != nil {
 		return nil, err
 	}
+	registry.initRouter()
 	registry.attachRoutes()
 
 	return registry, nil
@@ -101,6 +99,10 @@ func (r *Registry) initStorage() {
 	r.Storage = storage.New(r.Config.StorageDir)
 }
 
+func (r *Registry) initRouter() {
+	r.Router = httprouter.New()
+}
+
 func (r *Registry) attachRoutes() {
 	r.Router.GET("/", r.wrapErrHandle(r.HandleRoot))
 
@@ -109,6 +111,8 @@ func (r *Registry) attachRoutes() {
 
 	r.Router.GET("/:name/ping", r.wrapErrHandle(r.HandlePing))
 	r.Router.GET("/:name/stats", r.wrapErrHandle(r.HandleStats))
+	r.Router.GET("/:name/upstreams", r.wrapErrHandle(r.HandleUpstreams))
+	r.Router.GET("/:name/ui", r.wrapErrHandle(r.HandleUI))
 }
 
 // errHandle is a custom HTTP handle that can optionally return an error.

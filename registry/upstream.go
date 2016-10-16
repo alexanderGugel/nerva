@@ -21,6 +21,7 @@
 package registry
 
 import (
+	"github.com/alexanderGugel/nerva/util"
 	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
@@ -48,6 +49,16 @@ func NewUpstream(rootURL string) (*Upstream, error) {
 	}, nil
 }
 
+// Ping checks it the upstream registry can be reached.
+func (u *Upstream) Ping() error {
+	res, err := http.Get(u.URL.String())
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return nil
+}
+
 // HandleReq redirects the client to the package root of the package
 // with the specified name.
 func (u *Upstream) HandleReq(w http.ResponseWriter, req *http.Request,
@@ -66,9 +77,34 @@ func (u *Upstream) HandleReq(w http.ResponseWriter, req *http.Request,
 		return err
 	}
 	copyHeader(w.Header(), res.Header)
+	defer res.Body.Close()
 
 	_, err = io.Copy(w, res.Body)
 	return err
+}
+
+// UpstreamStatus represents the response to a request to the /upstreams
+// endpoint.
+type UpstreamStatus struct {
+	URL    string
+	Status string
+}
+
+// GetStatus returns the current status of the upstream registry.
+func (u *Upstream) GetStatus() *UpstreamStatus {
+	pingErr := u.Ping()
+	var status string
+	switch pingErr {
+	case nil:
+		status = "up"
+	default:
+		status = "down"
+	}
+
+	return &UpstreamStatus{
+		URL:    u.URL.String(),
+		Status: status,
+	}
 }
 
 // copyHeader copies header pairs from one header to another.
@@ -79,4 +115,16 @@ func copyHeader(dst, src http.Header) {
 			dst.Add(k, v)
 		}
 	}
+}
+
+// HandleUpstreams retrieves the current memory stats.
+func (r *Registry) HandleUpstreams(w http.ResponseWriter, req *http.Request,
+	ps httprouter.Params) error {
+	name := ps.ByName("name")
+
+	if name != "-" {
+		r.Router.NotFound.ServeHTTP(w, req)
+		return nil
+	}
+	return util.RespondJSON(w, 200, r.Upstream.GetStatus())
 }
