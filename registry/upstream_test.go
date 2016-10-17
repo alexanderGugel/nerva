@@ -21,8 +21,6 @@
 package registry
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -39,6 +37,18 @@ func TestNewUpstream(t *testing.T) {
 	upstream := createUpstream(url, t)
 	if upstream.URL.String() != url {
 		t.Errorf("upstream.URL = %q want %q", url, upstream.URL.String(), url)
+	}
+}
+
+func TestGetStatusDown(t *testing.T) {
+	url := "http://localhost:8080"
+	upstream := createUpstream(url, t)
+	status := upstream.GetStatus()
+	if status.Status != "down" {
+		t.Errorf("upstream.Status = %q, want %q", status.Status, "down")
+	}
+	if status.URL != url {
+		t.Errorf("status.URL = %q, want %q", status.URL, url)
 	}
 }
 

@@ -37,23 +37,34 @@ type Config struct {
 	Logger       *log.Logger `json:"-"`
 }
 
-// ShouldUseTLS checks if TLS is (partially) configured.
-func (c *Config) ShouldUseTLS() bool {
+// DefaultConfig create a default configuration with sane defaults.
+func DefaultConfig() *Config {
+	return &Config{
+		StorageDir:   "./packages",
+		UpstreamURL:  "http://registry.npmjs.com",
+		ShaCacheSize: 500,
+		Addr:         ":8200",
+		CertFile:     "",
+		KeyFile:      "",
+		FrontAddr:    "http://127.0.0.1:8200",
+		Logger:       log.StandardLogger(),
+	}
+}
+
+// shouldUseTLS checks if TLS is (partially) configured.
+func (c *Config) shouldUseTLS() bool {
 	return c.CertFile != "" || c.KeyFile != ""
 }
 
-// ValidateConfig checks if the supplied config is valid.
-func ValidateConfig(c *Config) error {
-	if c == nil {
-		return errors.New("missing config")
-	}
+// Validate checks if the supplied config is valid.
+func (c *Config) Validate() error {
 	if c.Addr == "" {
 		return errors.New("missing Addr")
 	}
-	if c.ShouldUseTLS() && c.CertFile == "" {
+	if c.shouldUseTLS() && c.CertFile == "" {
 		return errors.New("missing CertFile")
 	}
-	if c.ShouldUseTLS() && c.KeyFile == "" {
+	if c.shouldUseTLS() && c.KeyFile == "" {
 		return errors.New("missing KeyFile")
 	}
 	if c.FrontAddr == "" {

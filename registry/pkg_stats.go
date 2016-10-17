@@ -91,8 +91,12 @@ func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
 	}
 
 	if !util.IsValid(name) {
-		res := &util.ErrorResponse{"bad request", "invalid name"}
-		return util.RespondJSON(w, http.StatusBadRequest, res)
+		code := http.StatusBadRequest
+		res := &util.ErrorResponse{
+			http.StatusText(code),
+			"invalid name",
+		}
+		return util.RespondJSON(w, code, res)
 	}
 
 	return r.wrapRepoHandle(HandlePkgStats)(w, req, ps)

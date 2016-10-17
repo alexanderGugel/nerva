@@ -43,17 +43,33 @@ type Registry struct {
 
 // New create a new CommonJS registry.
 func New(config *Config) (*Registry, error) {
-	if err := ValidateConfig(config); err != nil {
+	if config == nil {
+		config = DefaultConfig()
+	}
+	if err := config.Validate(); err != nil {
 		return nil, err
 	}
 	registry := &Registry{Config: config}
 	if err := registry.init(); err != nil {
 		return nil, err
 	}
-	registry.initRouter()
-	registry.attachRoutes()
 
 	return registry, nil
+}
+
+func (r *Registry) init() error {
+	initFns := []func() error{
+		r.initShaCache,
+		r.initUpstream,
+		r.initStorage,
+		r.initRouter,
+	}
+	for _, f := range initFns {
+		if err := f(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Start starts the registry.
@@ -61,26 +77,17 @@ func (r *Registry) Start() error {
 	r.Config.Logger.WithFields(log.Fields{
 		"config": *r.Config,
 	}).Info("starting registry")
-	if r.Config.ShouldUseTLS() {
-		return http.ListenAndServeTLS(
-			r.Config.Addr,
+	server := &http.Server{
+		Addr: r.Config.Addr,
+		Handler: r.Router,
+	}
+	if r.Config.shouldUseTLS() {
+		server.ListenAndServeTLS(
 			r.Config.CertFile,
 			r.Config.KeyFile,
-			r.Router,
 		)
 	}
-	return http.ListenAndServe(r.Config.Addr, r.Router)
-}
-
-func (r *Registry) init() error {
-	if err := r.initShaCache(); err != nil {
-		return err
-	}
-	if err := r.initUpstream(); err != nil {
-		return err
-	}
-	r.initStorage()
-	return nil
+	return server.ListenAndServe()
 }
 
 func (r *Registry) initShaCache() error {
@@ -95,24 +102,38 @@ func (r *Registry) initUpstream() error {
 	return err
 }
 
-func (r *Registry) initStorage() {
-	r.Storage = storage.New(r.Config.StorageDir)
+func (r *Registry) initStorage() error {
+	storage := storage.New(r.Config.StorageDir)
+	r.Storage = storage
+	return nil
 }
 
-func (r *Registry) initRouter() {
+func (r *Registry) initRouter() error {
 	r.Router = httprouter.New()
-}
 
-func (r *Registry) attachRoutes() {
-	r.Router.GET("/", r.wrapErrHandle(r.HandleRoot))
+	r.Router.GET("/", r.wrapErrHandle(
+		r.HandleRoot,
+	))
+	r.Router.GET("/:name", r.wrapErrHandle(
+		r.wrapRepoHandle(r.HandlePackageRoot),
+	))
+	r.Router.GET("/:name/-/:version", r.wrapErrHandle(
+		r.wrapRepoHandle(r.HandlePkgDownload),
+	))
+	r.Router.GET("/:name/ping", r.wrapErrHandle(
+		r.HandlePing,
+	))
+	r.Router.GET("/:name/stats", r.wrapErrHandle(
+		r.HandleStats,
+	))
+	r.Router.GET("/:name/upstreams", r.wrapErrHandle(
+		r.HandleUpstreams,
+	))
+	r.Router.GET("/:name/ui", r.wrapErrHandle(
+		r.HandleUI,
+	))
 
-	r.Router.GET("/:name", r.wrapErrHandle(r.wrapRepoHandle(r.HandlePackageRoot)))
-	r.Router.GET("/:name/-/:version", r.wrapErrHandle(r.wrapRepoHandle(r.HandlePkgDownload)))
-
-	r.Router.GET("/:name/ping", r.wrapErrHandle(r.HandlePing))
-	r.Router.GET("/:name/stats", r.wrapErrHandle(r.HandleStats))
-	r.Router.GET("/:name/upstreams", r.wrapErrHandle(r.HandleUpstreams))
-	r.Router.GET("/:name/ui", r.wrapErrHandle(r.HandleUI))
+	return nil
 }
 
 // errHandle is a custom HTTP handle that can optionally return an error.
@@ -127,8 +148,12 @@ func (r *Registry) wrapErrHandle(handler errHandle) httprouter.Handle {
 		}
 		contextLog := r.Config.Logger.WithFields(util.GetRequestFields(req))
 		util.LogErr(contextLog, err, "handler failed")
-		res := &util.ErrorResponse{"internal server error", "unexpected internal error"}
-		if err := util.RespondJSON(w, http.StatusInternalServerError, res); err != nil {
+		code := http.StatusInternalServerError
+		res := &util.ErrorResponse{
+			http.StatusText(code),
+			"unexpected internal error",
+		}
+		if err := util.RespondJSON(w, code, res); err != nil {
 			util.LogErr(contextLog, err, "failed to write response")
 		}
 	}
@@ -142,8 +167,12 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 		name := ps.ByName("name")
 
 		if !util.IsValid(name) {
-			res := &util.ErrorResponse{"bad request", "invalid name"}
-			return util.RespondJSON(w, http.StatusBadRequest, res)
+			code := http.StatusBadRequest
+			res := &util.ErrorResponse{
+				http.StatusText(code),
+				"invalid name",
+			}
+			return util.RespondJSON(w, code, res)
 		}
 
 		repo, err := r.Storage.GetRepo(name)
@@ -157,8 +186,12 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 		}
 
 		if r.Upstream == nil || r.Upstream.URL == nil {
-			res := &util.ErrorResponse{"not found", "package not found"}
-			return util.RespondJSON(w, http.StatusNotFound, res)
+			code := http.StatusNotFound
+			res := &util.ErrorResponse{
+				http.StatusText(code),
+				"package not found",
+			}
+			return util.RespondJSON(w, code, res)
 		}
 
 		return r.Upstream.HandleReq(w, req, ps)

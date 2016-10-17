@@ -57,8 +57,12 @@ func ErrHandler(handler ErrHandle) httprouter.Handle {
 			contextLog := log.WithFields(GetRequestFields(req))
 
 			LogErr(contextLog, err, "handler failed")
-			res := &ErrorResponse{"internal server error", "unexpected internal error"}
-			if err := RespondJSON(w, http.StatusInternalServerError, res); err != nil {
+			code := http.StatusInternalServerError
+			res := &ErrorResponse{
+				http.StatusText(code),
+				"unexpected internal error",
+			}
+			if err := RespondJSON(w, code, res); err != nil {
 				LogErr(contextLog, err, "failed to write response")
 			}
 		}

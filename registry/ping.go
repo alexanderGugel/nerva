@@ -37,7 +37,6 @@ func NewPing() *Ping {
 
 // HandlePing responds with an empty JSON object. npm's ping command hits this
 // endpoint.
-func (*Registry) HandlePing(w http.ResponseWriter, req *http.Request,
-	_ httprouter.Params) error {
+func (*Registry) HandlePing(w http.ResponseWriter, req *http.Request, _ httprouter.Params) error {
 	return util.RespondJSON(w, 200, NewPing())
 }

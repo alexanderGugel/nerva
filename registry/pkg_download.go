@@ -35,11 +35,12 @@ func (r *Registry) HandlePkgDownload(repo *git.Repository,
 
 	id, err := git.NewOid(version)
 	if err != nil || id == nil {
+		code := http.StatusBadRequest
 		res := &util.ErrorResponse{
-			"bad request",
+			http.StatusText(code),
 			"version is not a valid git object id",
 		}
-		return util.RespondJSON(w, http.StatusBadRequest, res)
+		return util.RespondJSON(w, code, res)
 	}
 
 	d, err := storage.NewDownload(repo, id)
@@ -48,8 +49,12 @@ func (r *Registry) HandlePkgDownload(repo *git.Repository,
 			gitErr.Class != git.ErrClassOdb {
 			return err
 		}
-		res := &util.ErrorResponse{"not found", "package not found"}
-		return util.RespondJSON(w, http.StatusNotFound, res)
+		code := http.StatusNotFound
+		res := &util.ErrorResponse{
+			http.StatusText(code),
+			"package not found",
+		}
+		return util.RespondJSON(w, code, res)
 	}
 	return d.Start(w)
 }
