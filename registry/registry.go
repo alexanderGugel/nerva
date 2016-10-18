@@ -78,7 +78,7 @@ func (r *Registry) Start() error {
 		"config": *r.Config,
 	}).Info("starting registry")
 	server := &http.Server{
-		Addr: r.Config.Addr,
+		Addr:    r.Config.Addr,
 		Handler: r.Router,
 	}
 	if r.Config.shouldUseTLS() {
@@ -103,34 +103,26 @@ func (r *Registry) initUpstream() error {
 }
 
 func (r *Registry) initStorage() error {
-	storage := storage.New(r.Config.StorageDir)
+	storage, err := storage.New(r.Config.StorageDir)
 	r.Storage = storage
-	return nil
+	return err
 }
 
 func (r *Registry) initRouter() error {
 	r.Router = httprouter.New()
 
-	r.Router.GET("/", r.wrapErrHandle(
-		r.HandleRoot,
-	))
+	r.Router.GET("/", r.wrapErrHandle(r.HandleRoot))
+
+	r.Router.GET("/:name/ping", r.wrapErrHandle(r.HandlePing))
+	r.Router.GET("/:name/stats", r.wrapErrHandle(r.HandleStats))
+	r.Router.GET("/:name/upstreams", r.wrapErrHandle(r.HandleUpstreams))
+	r.Router.GET("/:name/ui", r.wrapErrHandle(r.HandleUI))
+
 	r.Router.GET("/:name", r.wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePackageRoot),
 	))
 	r.Router.GET("/:name/-/:version", r.wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePkgDownload),
-	))
-	r.Router.GET("/:name/ping", r.wrapErrHandle(
-		r.HandlePing,
-	))
-	r.Router.GET("/:name/stats", r.wrapErrHandle(
-		r.HandleStats,
-	))
-	r.Router.GET("/:name/upstreams", r.wrapErrHandle(
-		r.HandleUpstreams,
-	))
-	r.Router.GET("/:name/ui", r.wrapErrHandle(
-		r.HandleUI,
 	))
 
 	return nil

@@ -28,7 +28,7 @@ import (
 func TestDefaultConfigNil(t *testing.T) {
 	config := DefaultConfig()
 	if config == nil {
-		t.Errorf("DefaultConfig() = %q, want config struct", config)
+		t.Errorf("DefaultConfig() = %v; want not nil", config)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestConfigValidate(t *testing.T) {
 		err := tt.config.Validate()
 		isValid := err == nil
 		if isValid != tt.isValid {
-			t.Errorf("%d.Validate() = %t, want %t", tt.config, isValid, tt.isValid)
+			t.Errorf("%d.Validate() = %v, want %v", tt.config, isValid, tt.isValid)
 		}
 	}
 }

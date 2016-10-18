@@ -28,7 +28,7 @@ import (
 func TestNewShaCacheInvalidSize(t *testing.T) {
 	for i := -1; i < 1; i++ {
 		if _, err := NewShaCache(i); err == nil {
-			t.Errorf("NewShaCache(%q) expected err", i)
+			t.Errorf("NewShaCache(%v) failed: %v", i, err)
 		}
 	}
 }
@@ -36,7 +36,7 @@ func TestNewShaCacheInvalidSize(t *testing.T) {
 func TestNewShaCachePositiveSize(t *testing.T) {
 	for i := 1; i < 100; i++ {
 		if _, err := NewShaCache(i); err != nil {
-			t.Errorf("NewShaCache(%q) unexpected err: %q", i, err)
+			t.Errorf("NewShaCache(%v) failed: %v", i, err)
 		}
 	}
 }
@@ -44,32 +44,32 @@ func TestNewShaCachePositiveSize(t *testing.T) {
 func TestShaCacheAdd(t *testing.T) {
 	c, err := NewShaCache(1)
 	if err != nil {
-		t.Errorf("NewShaCache(%q) unexpected err: %q", 1, err)
+		t.Errorf("NewShaCache(%v) failed: %v", 1, err)
 	}
 	id0 := *git.NewOidFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	shasum0 := "shasum0"
 	if ok := c.Add(id0, shasum0); ok {
-		t.Errorf("c.Add(%q, %q) = %q want %q", id0, shasum0, ok, false)
+		t.Errorf("c.Add(%v, %v) = %v; want %v", id0, shasum0, ok, false)
 	}
 	id1 := *git.NewOidFromBytes([]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
 	shasum1 := "shasum1"
 	if ok := c.Add(id1, shasum1); !ok {
-		t.Errorf("c.Add(%q, %q) = %q want %q", id1, shasum1, ok, true)
+		t.Errorf("c.Add(%v, %v) = %v; want %v", id1, shasum1, ok, true)
 	}
 }
 
 func TestShaCacheGet(t *testing.T) {
 	c, err := NewShaCache(1)
 	if err != nil {
-		t.Errorf("NewShaCache(%q) unexpected err: %q", 1, err)
+		t.Errorf("NewShaCache(%v) unexpected err: %v", 1, err)
 	}
 	id := *git.NewOidFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 	shasum := "shasum"
 	if ok := c.Add(id, shasum); ok {
-		t.Errorf("c.Add(%q, %q) = %q want %q", id, shasum, ok, false)
+		t.Errorf("c.Add(%v, %v) = %v; want %v", id, shasum, ok, false)
 	}
 	result, ok := c.Get(id)
 	if !ok || result != shasum {
-		t.Errorf("c.Get(%q) = %q, %q want %q, %q", id, result, ok, shasum, true)
+		t.Errorf("c.Get(%v) = %v, %v; want %v, %v", id, result, ok, shasum, true)
 	}
 }

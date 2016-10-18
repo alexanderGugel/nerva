@@ -27,7 +27,7 @@ import (
 func createUpstream(url string, t *testing.T) *Upstream {
 	upstream, err := NewUpstream(url)
 	if err != nil {
-		t.Errorf("NewUpstream(%q) unexpected err: %q", url, err)
+		t.Errorf("NewUpstream(%v) failed: %v", url, err)
 	}
 	return upstream
 }
@@ -36,7 +36,7 @@ func TestNewUpstream(t *testing.T) {
 	url := "http://registry.npmjs.com"
 	upstream := createUpstream(url, t)
 	if upstream.URL.String() != url {
-		t.Errorf("upstream.URL = %q want %q", url, upstream.URL.String(), url)
+		t.Errorf("upstream.URL = %v; want %v", url, upstream.URL.String(), url)
 	}
 }
 
@@ -45,37 +45,9 @@ func TestGetStatusDown(t *testing.T) {
 	upstream := createUpstream(url, t)
 	status := upstream.GetStatus()
 	if status.Status != "down" {
-		t.Errorf("upstream.Status = %q, want %q", status.Status, "down")
+		t.Errorf("upstream.Status = %v; want %v", status.Status, "down")
 	}
 	if status.URL != url {
-		t.Errorf("status.URL = %q, want %q", status.URL, url)
+		t.Errorf("status.URL = %v; want %v", status.URL, url)
 	}
 }
-
-// func TestUpstreamRedirectCode(t *testing.T) {
-// 	url := "http://registry.npmjs.com"
-// 	upstream := createUpstream(url, t)
-
-// 	w := httptest.NewRecorder()
-// 	req, _ := http.NewRequest("GET", "", nil)
-// 	upstream.RedirectPackageRoot("tape", w, req)
-
-// 	wantCode := http.StatusMovedPermanently
-// 	if gotCode := w.Code; gotCode != wantCode {
-// 		t.Errorf("w.Code = %q, want %q", gotCode, wantCode)
-// 	}
-// }
-
-// func TestUpstreamRedirectHeader(t *testing.T) {
-// 	url := "http://registry.npmjs.com"
-// 	upstream := createUpstream(url, t)
-
-// 	w := httptest.NewRecorder()
-// 	req, _ := http.NewRequest("GET", "", nil)
-// 	upstream.RedirectPackageRoot("tape", w, req)
-
-// 	wantLocation := "http://registry.npmjs.com/tape"
-// 	if gotLocation := w.Header().Get("Location"); gotLocation != wantLocation {
-// 		t.Errorf("w.Header().Get(\"Location\") = %q, want %q", gotLocation, wantLocation)
-// 	}
-// }

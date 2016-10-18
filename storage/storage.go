@@ -25,6 +25,7 @@ package storage
 import (
 	"github.com/libgit2/git2go"
 	"io/ioutil"
+	"os"
 	"path"
 )
 
@@ -34,8 +35,17 @@ type Storage struct {
 }
 
 // New creates a new storage bound to the specified directory.
-func New(dir string) *Storage {
-	return &Storage{dir}
+func New(dir string) (*Storage, error) {
+	s := &Storage{dir}
+	if err := s.init(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// init creates the underlying directory if necessary.
+func (s *Storage) init() error {
+	return os.MkdirAll(s.Dir, os.ModePerm)
 }
 
 // GetRepo opens the repository in the sub-directory "name".

@@ -32,7 +32,7 @@ func TestRespondJSONCode(t *testing.T) {
 	RespondJSON(w, wantCode, nil)
 
 	if gotCode := w.Code; gotCode != wantCode {
-		t.Errorf("w.Code = %v want %v", gotCode, wantCode)
+		t.Errorf("w.Code = %v; want %v", gotCode, wantCode)
 	}
 }
 
@@ -41,15 +41,16 @@ func TestRespondJSONContentType(t *testing.T) {
 	RespondJSON(w, http.StatusTeapot, nil)
 
 	wantContentType := "application/json; charset=utf-8"
-	if gotContentType := w.Header().Get("Content-Type"); gotContentType != wantContentType {
-		t.Errorf("w.Header().Get(\"Content-Type\") = %v want %v", gotContentType, wantContentType)
+	key := "Content-Type"
+	if gotContentType := w.Header().Get(key); gotContentType != wantContentType {
+		t.Errorf("w.Header().Get(%v) = %v; want %v", key, gotContentType, wantContentType)
 	}
 }
 
 func TestRespondJSONSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 	if err := RespondJSON(w, http.StatusTeapot, nil); err != nil {
-		t.Errorf("RespondJSON(%q, %q, %q) should not err: %v", w, http.StatusTeapot, nil, err)
+		t.Errorf("RespondJSON(%q, %q, %q) failed: %v", w, http.StatusTeapot, nil, err)
 	}
 }
 
@@ -57,7 +58,7 @@ func TestRespondJSONNonStringKeys(t *testing.T) {
 	w := httptest.NewRecorder()
 	data := map[int]string{1: ""}
 	if err := RespondJSON(w, http.StatusTeapot, data); err == nil {
-		t.Errorf("RespondJSON(%q, %q, %q) should err", w, http.StatusTeapot, nil)
+		t.Errorf("RespondJSON(%q, %q, %q) did not fail", w, http.StatusTeapot, nil)
 	}
 }
 
@@ -69,6 +70,6 @@ func TestRespondJSONBody(t *testing.T) {
 	RespondJSON(w, http.StatusTeapot, data)
 
 	if gotBody := w.Body.String(); gotBody != wantBody {
-		t.Errorf("w.Body.String() = %v want %v", gotBody, wantBody)
+		t.Errorf("w.Body.String() = %v; want %v", gotBody, wantBody)
 	}
 }

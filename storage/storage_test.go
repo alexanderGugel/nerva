@@ -29,11 +29,19 @@ import (
 	"testing"
 )
 
+func createStorage(dir string, t *testing.T) *Storage {
+	storage, err := New(dir)
+	if err != nil {
+		t.Errorf("New(%v) failed: %v", dir, err)
+	}
+	return storage
+}
+
 func TestNew(t *testing.T) {
 	dir := "./some/directory"
-	storage := New(dir)
+	storage := createStorage(dir, t)
 	if storage.Dir != dir {
-		t.Errorf("New(%s).Dir = %v want %v", dir, storage.Dir, dir)
+		t.Errorf("New(%v).Dir = %v; want %v", dir, storage.Dir, dir)
 	}
 }
 
@@ -47,15 +55,15 @@ func TestLs(t *testing.T) {
 	createTestRepo(dirA, t)
 	createTestRepo(dirB, t)
 
-	storage := New(dir)
+	storage := createStorage(dir, t)
 
 	got, err := storage.Ls()
 	want := []string{"a", "b"}
 	if err != nil {
-		t.Errorf("failed storage.Ls() %v", err)
+		t.Errorf("storage.Ls() failed: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("storage.Ls() = %v want %v", got, want)
+		t.Errorf("storage.Ls() = %v; want %v", got, want)
 	}
 }
 
@@ -64,14 +72,17 @@ func TestLsFailedReadDir(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	nonExistingDir := filepath.Join(dir, "non_existing")
-	storage := New(nonExistingDir)
+	storage := createStorage(nonExistingDir, t)
+	if err := os.RemoveAll(nonExistingDir); err != nil {
+		t.Errorf("os.RemoveAll(%v) failed: %v", nonExistingDir, err)
+	}
 
 	names, err := storage.Ls()
 	if err == nil {
-		t.Errorf("expected storage.Ls() to fail")
+		t.Errorf("storage.Ls() did not fail")
 	}
 	if names != nil {
-		t.Errorf("storage.Ls() = %v want %v", names, nil)
+		t.Errorf("storage.Ls() = %v; want %v", names, nil)
 	}
 }
 
@@ -84,18 +95,18 @@ func TestLsFiles(t *testing.T) {
 
 	err := ioutil.WriteFile(filepath.Join(dir, "file"), nil, 0644)
 	if err != nil {
-		t.Fatalf("failed to write non-directory file into %v %v", dir, err)
+		t.Fatalf("failed to write %v: %v", dir, err)
 	}
 
-	storage := New(dir)
+	storage := createStorage(dir, t)
 
 	got, err := storage.Ls()
 	want := []string{"a"}
 	if err != nil {
-		t.Errorf("failed storage.Ls() %v", err)
+		t.Errorf("storage.Ls() failed: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("storage.Ls() = %v want %v", got, want)
+		t.Errorf("storage.Ls() = %v; want %v", got, want)
 	}
 }
 
@@ -107,13 +118,13 @@ func TestGetRepo(t *testing.T) {
 	dirA := filepath.Join(dir, name)
 	createTestRepo(dirA, t)
 
-	storage := New(dir)
+	storage := createStorage(dir, t)
 	repo, err := storage.GetRepo(name)
 	if err != nil {
-		t.Errorf("failed storage.GetRepo(%s) %v", name, err)
+		t.Errorf("storage.GetRepo(%v) failed: %v", name, err)
 	}
 	if repo == nil {
-		t.Errorf("storage.GetRepo(%s) = %v want *git.Repository", name, repo)
+		t.Errorf("storage.GetRepo(%v) = %v; want not nil", name, repo)
 	}
 }
 
@@ -126,14 +137,15 @@ func TestPeelTreeFailedLookup(t *testing.T) {
 
 	var zeroID git.Oid
 	if _, err := PeelTree(repo, &zeroID); err == nil {
-		t.Errorf("expected PeelTree(repo, %v) to fail", zeroID)
+		t.Errorf("PeelTree(repo, %v) did not fail", zeroID)
 	}
 }
 
 func createTempDir(t *testing.T) string {
-	path, err := ioutil.TempDir("", "storage_test")
+	dir := "storage_test"
+	path, err := ioutil.TempDir("", dir)
 	if err != nil {
-		t.Fatalf("failed to create temp dir %v", err)
+		t.Fatalf("ioutil.TempDir(%v, %v) failed: %v", "", dir, err)
 	}
 	return path
 }
@@ -141,13 +153,14 @@ func createTempDir(t *testing.T) string {
 func createTestRepo(path string, t *testing.T) *git.Repository {
 	repo, err := git.InitRepository(path, false)
 	if err != nil {
-		t.Fatalf("failed to initialize repository %v", err)
+		t.Fatalf("git.InitRepository(%v, %t) failed: %v", path, false, err)
 	}
 
-	tmpfile := "README"
-	err = ioutil.WriteFile(path+"/"+tmpfile, []byte("foo\n"), 0644)
-	if err != nil {
-		t.Fatalf("failed to write sample file %v", err)
+	filename := path + "/" + "README"
+	data := []byte("foo\n")
+	perm := os.FileMode(0644)
+	if err = ioutil.WriteFile(filename, data, perm); err != nil {
+		t.Fatalf("ioutil.WriteFile(%v, %v, %v) failed: %v", filename, data, perm, err)
 	}
 
 	return repo
