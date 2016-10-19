@@ -23,7 +23,6 @@ package registry
 import (
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"path"
 )
@@ -71,8 +70,7 @@ func NewRoot(storage *storage.Storage, url string) (*Root, error) {
 // or 302 redirect to the same URL as named in the string value, OR a valid
 // “package root url” response.
 // See http://wiki.commonjs.org/wiki/Packages/Registry#registry_root_url
-func (r *Registry) HandleRoot(w http.ResponseWriter, req *http.Request,
-	_ httprouter.Params) error {
+func (r *Registry) HandleRoot(w http.ResponseWriter, req *http.Request) error {
 	res, err := NewRoot(r.Storage, r.Config.FrontAddr)
 	if err != nil {
 		return err

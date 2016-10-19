@@ -21,7 +21,6 @@
 package registry
 
 import (
-	"github.com/julienschmidt/httprouter"
 	"html/template"
 	"net/http"
 )
@@ -42,8 +41,7 @@ var UITemplate = template.Must(template.New("ui").Parse(`
 `))
 
 // HandleUI serves the UI route.
-func (r *Registry) HandleUI(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error {
+func (r *Registry) HandleUI(w http.ResponseWriter, req *http.Request) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return UITemplate.Execute(w, nil)
 }

@@ -23,15 +23,14 @@ package registry
 import (
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"github.com/libgit2/git2go"
 	"net/http"
 )
 
 // HandlePkgDownload handles package downloads.
 func (r *Registry) HandlePkgDownload(repo *git.Repository,
-	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
-	version := ps.ByName("version")
+	w http.ResponseWriter, req *http.Request) error {
+	version := req.URL.Query().Get(":version")
 
 	id, err := git.NewOid(version)
 	if err != nil || id == nil {

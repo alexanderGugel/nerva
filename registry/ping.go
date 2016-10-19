@@ -22,7 +22,6 @@ package registry
 
 import (
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
 
@@ -37,7 +36,6 @@ func NewPing() *Ping {
 
 // HandlePing responds with an empty JSON object. npm's ping command hits this
 // endpoint.
-func (*Registry) HandlePing(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error {
+func (*Registry) HandlePing(w http.ResponseWriter, req *http.Request) error {
 	return util.RespondJSON(w, http.StatusOK, NewPing())
 }

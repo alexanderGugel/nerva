@@ -30,7 +30,7 @@ func TestRegistryHandlePing(t *testing.T) {
 	r := &Registry{}
 	w := httptest.NewRecorder()
 
-	err := r.HandlePing(w, nil, nil)
+	err := r.HandlePing(w, nil)
 	if err != nil {
 		t.Errorf("r.HandlePing failed: %v", err)
 	}

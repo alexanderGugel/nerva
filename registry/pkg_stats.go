@@ -22,7 +22,6 @@ package registry
 
 import (
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"github.com/libgit2/git2go"
 	"net/http"
 	"runtime"
@@ -61,7 +60,7 @@ func NewPkgStats(repo *git.Repository) (*PkgStats, error) {
 
 // HandlePkgStats retrieves the current memory stats.
 func HandlePkgStats(repo *git.Repository,
-	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+	w http.ResponseWriter, req *http.Request) error {
 	res, err := NewPkgStats(repo)
 	if err != nil {
 		return err
@@ -77,27 +76,7 @@ func NewMemStats() *runtime.MemStats {
 }
 
 // HandleMemStats retrieves the current memory stats.
-func HandleMemStats(w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
+func HandleMemStats(w http.ResponseWriter, req *http.Request) error {
 	res := NewMemStats()
 	return util.RespondJSON(w, 200, res)
-}
-
-// HandleStats retrieves the current memory stats.
-func (r *Registry) HandleStats(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error {
-	name := ps.ByName("name")
-	if name == "-" {
-		return HandleMemStats(w, req, ps)
-	}
-
-	if !util.IsValid(name) {
-		code := http.StatusBadRequest
-		res := &util.ErrorResponse{
-			http.StatusText(code),
-			"invalid name",
-		}
-		return util.RespondJSON(w, code, res)
-	}
-
-	return r.wrapRepoHandle(HandlePkgStats)(w, req, ps)
 }

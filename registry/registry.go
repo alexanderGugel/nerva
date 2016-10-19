@@ -26,15 +26,15 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"github.com/libgit2/git2go"
+	"github.com/bmizerany/pat"
 	"net/http"
 )
 
 // Registry represents an Common JS registry server. A Registry does exposes a
 // router, which can be bound to an arbitrary socket.
 type Registry struct {
-	Router   *httprouter.Router
+	Mux *pat.PatternServeMux
 	Storage  *storage.Storage
 	Upstream *Upstream
 	ShaCache *storage.ShaCache
@@ -79,7 +79,7 @@ func (r *Registry) Start() error {
 	}).Info("starting registry")
 	server := &http.Server{
 		Addr:    r.Config.Addr,
-		Handler: r.Router,
+		Handler: r.Mux,
 	}
 	if r.Config.shouldUseTLS() {
 		server.ListenAndServeTLS(
@@ -109,32 +109,33 @@ func (r *Registry) initStorage() error {
 }
 
 func (r *Registry) initRouter() error {
-	r.Router = httprouter.New()
+	r.Mux = pat.New()
+	r.Mux.Get("/", r.wrapErrHandle(r.HandleRoot))
 
-	r.Router.GET("/", r.wrapErrHandle(r.HandleRoot))
+	r.Mux.Get("/-/ping", r.wrapErrHandle(r.HandlePing))
+	r.Mux.Get("/-/ui", r.wrapErrHandle(r.HandleUI))
+	r.Mux.Get("/-/stats", r.wrapErrHandle(HandleMemStats))
+	r.Mux.Get("/-/upstreams", r.wrapErrHandle(r.HandleUpstreams))
 
-	r.Router.GET("/:name/ping", r.wrapErrHandle(r.HandlePing))
-	r.Router.GET("/:name/stats", r.wrapErrHandle(r.HandleStats))
-	r.Router.GET("/:name/upstreams", r.wrapErrHandle(r.HandleUpstreams))
-	r.Router.GET("/:name/ui", r.wrapErrHandle(r.HandleUI))
-
-	r.Router.GET("/:name", r.wrapErrHandle(
+	r.Mux.Get("/:name", r.wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePackageRoot),
 	))
-	r.Router.GET("/:name/-/:version", r.wrapErrHandle(
+	r.Mux.Get("/:name/-/:version", r.wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePkgDownload),
 	))
+	r.Mux.Get("/:name/stats", r.wrapErrHandle(r.wrapRepoHandle(
+		HandlePkgStats,
+	)))
 
 	return nil
 }
 
 // errHandle is a custom HTTP handle that can optionally return an error.
-type errHandle func(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error
+type errHandle func(w http.ResponseWriter, req *http.Request) error
 
-func (r *Registry) wrapErrHandle(handler errHandle) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		err := handler(w, req, ps)
+func (r *Registry) wrapErrHandle(handler errHandle) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		err := handler(w, req)
 		if err == nil {
 			return
 		}
@@ -151,12 +152,11 @@ func (r *Registry) wrapErrHandle(handler errHandle) httprouter.Handle {
 	}
 }
 
-type repoHandle func(repo *git.Repository, w http.ResponseWriter,
-	req *http.Request, ps httprouter.Params) error
+type repoHandle func(repo *git.Repository, w http.ResponseWriter, req *http.Request) error
 
 func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
-		name := ps.ByName("name")
+	return func(w http.ResponseWriter, req *http.Request) error {
+		name := req.URL.Query().Get(":name")
 
 		if !util.IsValid(name) {
 			code := http.StatusBadRequest
@@ -169,7 +169,7 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 
 		repo, err := r.Storage.GetRepo(name)
 		if err == nil {
-			return handle(repo, w, req, ps)
+			return handle(repo, w, req)
 		}
 
 		if gitErr, ok := err.(*git.GitError); !ok ||
@@ -186,6 +186,6 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 			return util.RespondJSON(w, code, res)
 		}
 
-		return r.Upstream.HandleReq(w, req, ps)
+		return r.Upstream.HandleReq(w, req)
 	}
 }

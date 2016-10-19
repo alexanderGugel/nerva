@@ -26,7 +26,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"github.com/libgit2/git2go"
 	"net/http"
 	"regexp"
@@ -137,8 +136,8 @@ func NewPackageRoot(name string, url string, repo *git.Repository,
 // {registry root url}/{package name}.
 // See http://wiki.commonjs.org/wiki/Packages/Registry#package_root_url
 func (r *Registry) HandlePackageRoot(repo *git.Repository,
-	w http.ResponseWriter, req *http.Request, ps httprouter.Params) error {
-	name := ps.ByName("name")
+	w http.ResponseWriter, req *http.Request) error {
+	name := req.URL.Query().Get(":name")
 	res, err := NewPackageRoot(name, r.Config.FrontAddr, repo, r.ShaCache)
 	if err != nil {
 		return err

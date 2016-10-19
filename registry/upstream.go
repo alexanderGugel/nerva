@@ -22,7 +22,6 @@ package registry
 
 import (
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"net/http"
 	"net/url"
@@ -61,8 +60,7 @@ func (u *Upstream) Ping() error {
 
 // HandleReq redirects the client to the package root of the package
 // with the specified name.
-func (u *Upstream) HandleReq(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error {
+func (u *Upstream) HandleReq(w http.ResponseWriter, req *http.Request) error {
 
 	url := *u.URL
 	url.Path = path.Join(url.Path, req.URL.Path)
@@ -118,13 +116,6 @@ func copyHeader(dst, src http.Header) {
 }
 
 // HandleUpstreams retrieves the current memory stats.
-func (r *Registry) HandleUpstreams(w http.ResponseWriter, req *http.Request,
-	ps httprouter.Params) error {
-	name := ps.ByName("name")
-
-	if name != "-" {
-		r.Router.NotFound.ServeHTTP(w, req)
-		return nil
-	}
+func (r *Registry) HandleUpstreams(w http.ResponseWriter, req *http.Request) error {
 	return util.RespondJSON(w, 200, r.Upstream.GetStatus())
 }
