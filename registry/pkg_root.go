@@ -138,7 +138,7 @@ func NewPackageRoot(name string, url string, repo *git.Repository,
 func (r *Registry) HandlePackageRoot(repo *git.Repository,
 	w http.ResponseWriter, req *http.Request) error {
 	name := req.URL.Query().Get(":name")
-	res, err := NewPackageRoot(name, r.Config.FrontAddr, repo, r.ShaCache)
+	res, err := NewPackageRoot(name, r.config.FrontAddr, repo, r.shaCache)
 	if err != nil {
 		return err
 	}

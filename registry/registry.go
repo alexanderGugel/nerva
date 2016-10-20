@@ -26,19 +26,19 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/alexanderGugel/nerva/storage"
 	"github.com/alexanderGugel/nerva/util"
-	"github.com/libgit2/git2go"
 	"github.com/bmizerany/pat"
+	"github.com/libgit2/git2go"
 	"net/http"
 )
 
 // Registry represents an Common JS registry server. A Registry does exposes a
 // router, which can be bound to an arbitrary socket.
 type Registry struct {
-	Mux *pat.PatternServeMux
-	Storage  *storage.Storage
-	Upstream *Upstream
-	ShaCache *storage.ShaCache
-	Config   *Config
+	config   *Config
+	mux      *pat.PatternServeMux
+	storage  *storage.Storage
+	upstream *Upstream
+	shaCache *storage.ShaCache
 }
 
 // New create a new CommonJS registry.
@@ -49,7 +49,7 @@ func New(config *Config) (*Registry, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	registry := &Registry{Config: config}
+	registry := &Registry{config: config}
 	if err := registry.init(); err != nil {
 		return nil, err
 	}
@@ -74,67 +74,67 @@ func (r *Registry) init() error {
 
 // Start starts the registry.
 func (r *Registry) Start() error {
-	r.Config.Logger.WithFields(log.Fields{
-		"config": *r.Config,
+	r.config.Logger.WithFields(log.Fields{
+		"config": *r.config,
 	}).Info("starting registry")
 	server := &http.Server{
-		Addr:    r.Config.Addr,
-		Handler: r.Mux,
+		Addr:    r.config.Addr,
+		Handler: r.mux,
 	}
-	if r.Config.shouldUseTLS() {
+	if r.config.shouldUseTLS() {
 		server.ListenAndServeTLS(
-			r.Config.CertFile,
-			r.Config.KeyFile,
+			r.config.CertFile,
+			r.config.KeyFile,
 		)
 	}
 	return server.ListenAndServe()
 }
 
 func (r *Registry) initShaCache() error {
-	shaCache, err := storage.NewShaCache(r.Config.ShaCacheSize)
-	r.ShaCache = shaCache
+	shaCache, err := storage.NewShaCache(r.config.ShaCacheSize)
+	r.shaCache = shaCache
 	return err
 }
 
 func (r *Registry) initUpstream() error {
-	upstream, err := NewUpstream(r.Config.UpstreamURL)
-	r.Upstream = upstream
+	upstream, err := NewUpstream(r.config.UpstreamURL)
+	r.upstream = upstream
 	return err
 }
 
 func (r *Registry) initStorage() error {
-	storage, err := storage.New(r.Config.StorageDir)
-	r.Storage = storage
+	storage, err := storage.New(r.config.StorageDir)
+	r.storage = storage
 	return err
 }
 
 func (r *Registry) initRouter() error {
-	r.Mux = pat.New()
-	r.Mux.Get("/", wrapErrHandle(r.HandleRoot, r.Config.Logger))
+	r.mux = pat.New()
+	r.mux.Get("/", wrapErrHandle(r.HandleRoot, r.config.Logger))
 
-	r.Mux.Get("/-/ping", wrapErrHandle(r.HandlePing, r.Config.Logger))
-	r.Mux.Get("/-/ui", wrapErrHandle(r.HandleUI, r.Config.Logger))
-	r.Mux.Get("/-/stats", wrapErrHandle(HandleMemStats, r.Config.Logger))
-	r.Mux.Get("/-/upstreams", wrapErrHandle(r.HandleUpstreams, r.Config.Logger))
+	r.mux.Get("/-/ping", wrapErrHandle(r.HandlePing, r.config.Logger))
+	r.mux.Get("/-/ui", wrapErrHandle(r.HandleUI, r.config.Logger))
+	r.mux.Get("/-/stats", wrapErrHandle(HandleMemStats, r.config.Logger))
+	r.mux.Get("/-/upstreams", wrapErrHandle(r.HandleUpstreams, r.config.Logger))
 
-	r.Mux.Get("/:name", wrapErrHandle(
+	r.mux.Get("/:name", wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePackageRoot),
-		r.Config.Logger,
+		r.config.Logger,
 	))
-	r.Mux.Get("/:name/-/:version", wrapErrHandle(
+	r.mux.Get("/:name/-/:version", wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePkgDownload),
-		r.Config.Logger,
+		r.config.Logger,
 	))
-	r.Mux.Get("/:name/stats", wrapErrHandle(
+	r.mux.Get("/:name/stats", wrapErrHandle(
 		r.wrapRepoHandle(HandlePkgStats),
-		r.Config.Logger,
+		r.config.Logger,
 	))
 
 	return nil
 }
 
 // errHandle is a custom HTTP handle that can optionally return an error.
-type errHandle func(w http.ResponseWriter, req *http.Request) error
+type errHandle func(http.ResponseWriter, *http.Request) error
 
 func wrapErrHandle(handler errHandle, logger *log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -155,7 +155,7 @@ func wrapErrHandle(handler errHandle, logger *log.Logger) http.HandlerFunc {
 	}
 }
 
-type repoHandle func(repo *git.Repository, w http.ResponseWriter, req *http.Request) error
+type repoHandle func(*git.Repository, http.ResponseWriter, *http.Request) error
 
 func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 	return func(w http.ResponseWriter, req *http.Request) error {
@@ -170,7 +170,7 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 			return util.RespondJSON(w, code, res)
 		}
 
-		repo, err := r.Storage.GetRepo(name)
+		repo, err := r.storage.GetRepo(name)
 		if err == nil {
 			return handle(repo, w, req)
 		}
@@ -180,7 +180,7 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 			return err
 		}
 
-		if r.Upstream == nil || r.Upstream.URL == nil {
+		if r.upstream == nil || r.upstream.URL == nil {
 			code := http.StatusNotFound
 			res := &util.ErrorResponse{
 				http.StatusText(code),
@@ -189,6 +189,6 @@ func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
 			return util.RespondJSON(w, code, res)
 		}
 
-		return r.Upstream.HandleReq(w, req)
+		return r.upstream.HandleReq(w, req)
 	}
 }

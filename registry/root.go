@@ -71,7 +71,7 @@ func NewRoot(storage *storage.Storage, url string) (*Root, error) {
 // “package root url” response.
 // See http://wiki.commonjs.org/wiki/Packages/Registry#registry_root_url
 func (r *Registry) HandleRoot(w http.ResponseWriter, req *http.Request) error {
-	res, err := NewRoot(r.Storage, r.Config.FrontAddr)
+	res, err := NewRoot(r.storage, r.config.FrontAddr)
 	if err != nil {
 		return err
 	}

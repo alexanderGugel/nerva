@@ -26,10 +26,8 @@ import (
 
 func NewRepoHandler() *webdav.Handler {
 	return &webdav.Handler{
-		Prefix: "",
+		Prefix:     "",
 		FileSystem: webdav.NewMemFS(),
 		LockSystem: webdav.NewMemLS(),
 	}
 }
-
-

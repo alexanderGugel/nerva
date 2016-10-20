@@ -117,5 +117,5 @@ func copyHeader(dst, src http.Header) {
 
 // HandleUpstreams retrieves the current memory stats.
 func (r *Registry) HandleUpstreams(w http.ResponseWriter, req *http.Request) error {
-	return util.RespondJSON(w, 200, r.Upstream.GetStatus())
+	return util.RespondJSON(w, 200, r.upstream.GetStatus())
 }
