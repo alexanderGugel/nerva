@@ -110,22 +110,25 @@ func (r *Registry) initStorage() error {
 
 func (r *Registry) initRouter() error {
 	r.Mux = pat.New()
-	r.Mux.Get("/", r.wrapErrHandle(r.HandleRoot))
+	r.Mux.Get("/", wrapErrHandle(r.HandleRoot, r.Config.Logger))
 
-	r.Mux.Get("/-/ping", r.wrapErrHandle(r.HandlePing))
-	r.Mux.Get("/-/ui", r.wrapErrHandle(r.HandleUI))
-	r.Mux.Get("/-/stats", r.wrapErrHandle(HandleMemStats))
-	r.Mux.Get("/-/upstreams", r.wrapErrHandle(r.HandleUpstreams))
+	r.Mux.Get("/-/ping", wrapErrHandle(r.HandlePing, r.Config.Logger))
+	r.Mux.Get("/-/ui", wrapErrHandle(r.HandleUI, r.Config.Logger))
+	r.Mux.Get("/-/stats", wrapErrHandle(HandleMemStats, r.Config.Logger))
+	r.Mux.Get("/-/upstreams", wrapErrHandle(r.HandleUpstreams, r.Config.Logger))
 
-	r.Mux.Get("/:name", r.wrapErrHandle(
+	r.Mux.Get("/:name", wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePackageRoot),
+		r.Config.Logger,
 	))
-	r.Mux.Get("/:name/-/:version", r.wrapErrHandle(
+	r.Mux.Get("/:name/-/:version", wrapErrHandle(
 		r.wrapRepoHandle(r.HandlePkgDownload),
+		r.Config.Logger,
 	))
-	r.Mux.Get("/:name/stats", r.wrapErrHandle(r.wrapRepoHandle(
-		HandlePkgStats,
-	)))
+	r.Mux.Get("/:name/stats", wrapErrHandle(
+		r.wrapRepoHandle(HandlePkgStats),
+		r.Config.Logger,
+	))
 
 	return nil
 }
@@ -133,13 +136,13 @@ func (r *Registry) initRouter() error {
 // errHandle is a custom HTTP handle that can optionally return an error.
 type errHandle func(w http.ResponseWriter, req *http.Request) error
 
-func (r *Registry) wrapErrHandle(handler errHandle) http.HandlerFunc {
+func wrapErrHandle(handler errHandle, logger *log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		err := handler(w, req)
 		if err == nil {
 			return
 		}
-		contextLog := r.Config.Logger.WithFields(util.GetRequestFields(req))
+		contextLog := logger.WithFields(util.GetRequestFields(req))
 		util.LogErr(contextLog, err, "handler failed")
 		code := http.StatusInternalServerError
 		res := &util.ErrorResponse{
