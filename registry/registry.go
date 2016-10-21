@@ -110,6 +110,7 @@ func (r *Registry) initStorage() error {
 
 func (r *Registry) initRouter() error {
 	r.mux = pat.New()
+
 	r.mux.Get("/", wrapErrHandle(r.HandleRoot, r.config.Logger))
 
 	r.mux.Get("/-/ping", wrapErrHandle(r.HandlePing, r.config.Logger))
@@ -118,15 +119,21 @@ func (r *Registry) initRouter() error {
 	r.mux.Get("/-/upstreams", wrapErrHandle(r.HandleUpstreams, r.config.Logger))
 
 	r.mux.Get("/:name", wrapErrHandle(
-		r.wrapRepoHandle(r.HandlePackageRoot),
+		wrapUpstreamHandle(
+			wrapRepoHandle(r.HandlePackageRoot, r.storage),
+			r.upstream,
+		),
 		r.config.Logger,
 	))
 	r.mux.Get("/:name/-/:version", wrapErrHandle(
-		r.wrapRepoHandle(r.HandlePkgDownload),
+		wrapUpstreamHandle(
+			wrapRepoHandle(r.HandlePkgDownload, r.storage),
+			r.upstream,
+		),
 		r.config.Logger,
 	))
 	r.mux.Get("/:name/stats", wrapErrHandle(
-		r.wrapRepoHandle(HandlePkgStats),
+		wrapRepoHandle(HandlePkgStats, r.storage),
 		r.config.Logger,
 	))
 
@@ -157,38 +164,27 @@ func wrapErrHandle(handler errHandle, logger *log.Logger) http.HandlerFunc {
 
 type repoHandle func(*git.Repository, http.ResponseWriter, *http.Request) error
 
-func (r *Registry) wrapRepoHandle(handle repoHandle) errHandle {
+func wrapRepoHandle(handle repoHandle, storage *storage.Storage) errHandle {
 	return func(w http.ResponseWriter, req *http.Request) error {
 		name := req.URL.Query().Get(":name")
-
-		if !util.IsValid(name) {
-			code := http.StatusBadRequest
-			res := &util.ErrorResponse{
-				http.StatusText(code),
-				"invalid name",
-			}
-			return util.RespondJSON(w, code, res)
-		}
-
-		repo, err := r.storage.GetRepo(name)
-		if err == nil {
-			return handle(repo, w, req)
-		}
-
-		if gitErr, ok := err.(*git.GitError); !ok ||
-			gitErr.Class != git.ErrClassOs {
+		repo, err := storage.GetRepo(name)
+		if err != nil {
 			return err
 		}
+		return handle(repo, w, req)
+	}
+}
 
-		if r.upstream == nil || r.upstream.URL == nil {
-			code := http.StatusNotFound
-			res := &util.ErrorResponse{
-				http.StatusText(code),
-				"package not found",
-			}
-			return util.RespondJSON(w, code, res)
+func wrapUpstreamHandle(handle errHandle, upstream *Upstream) errHandle {
+	return func(w http.ResponseWriter, req *http.Request) error {
+		err := handle(w, req)
+		if err == nil {
+			return nil
 		}
-
-		return r.upstream.HandleReq(w, req)
+		if gitErr, ok := err.(*git.GitError); !ok ||
+		gitErr.Class != git.ErrClassOs {
+			return err
+		}
+		return upstream.HandleReq(w, req)
 	}
 }
