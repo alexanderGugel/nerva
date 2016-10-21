@@ -94,7 +94,7 @@ func NewPackageRoot(name string, url string, repo *git.Repository,
 			if versions[version] != nil {
 				contextLog.Warn("duplicate version")
 			}
-			tarball := url + "/" + name + "/-/" + id.String()
+			tarball := url + "/" + name + "/-/" + id.String() + ".tgz"
 
 			shasum, ok := shaCache.Get(*id)
 			if !ok {

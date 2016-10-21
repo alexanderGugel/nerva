@@ -125,7 +125,7 @@ func (r *Registry) initRouter() error {
 		),
 		r.config.Logger,
 	))
-	r.mux.Get("/:name/-/:version", wrapErrHandle(
+	r.mux.Get("/:name/-/:version.tgz", wrapErrHandle(
 		wrapUpstreamHandle(
 			wrapRepoHandle(r.HandlePkgDownload, r.storage),
 			r.upstream,
@@ -182,7 +182,7 @@ func wrapUpstreamHandle(handle errHandle, upstream *Upstream) errHandle {
 			return nil
 		}
 		if gitErr, ok := err.(*git.GitError); !ok ||
-		gitErr.Class != git.ErrClassOs {
+			gitErr.Class != git.ErrClassOs {
 			return err
 		}
 		return upstream.HandleReq(w, req)
