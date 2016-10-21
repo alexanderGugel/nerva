@@ -111,33 +111,65 @@ func (r *Registry) initStorage() error {
 func (r *Registry) initRouter() error {
 	r.mux = pat.New()
 
-	r.mux.Get("/", wrapErrHandle(r.HandleRoot, r.config.Logger))
+	r.mux.Get("/", makeRootEndpoint(r))
 
-	r.mux.Get("/-/ping", wrapErrHandle(r.HandlePing, r.config.Logger))
-	r.mux.Get("/-/ui", wrapErrHandle(r.HandleUI, r.config.Logger))
-	r.mux.Get("/-/stats", wrapErrHandle(HandleMemStats, r.config.Logger))
-	r.mux.Get("/-/upstreams", wrapErrHandle(r.HandleUpstreams, r.config.Logger))
+	r.mux.Get("/-/ping", makePingEndpoint(r))
+	r.mux.Get("/-/ui", makeUIEndpoint(r))
+	r.mux.Get("/-/stats", makeStatsEndpoint(r))
+	r.mux.Get("/-/upstreams", makeUpstreamsEndpoint(r))
 
-	r.mux.Get("/:name", wrapErrHandle(
+	r.mux.Get("/:name", makePkgRootEndpoint(r))
+	r.mux.Get("/:name/-/:version.tgz", makePkgDownloadEndpoint(r))
+	r.mux.Get("/:name/stats", makePkgStatsEndpoint(r))
+
+	return nil
+}
+
+func makeRootEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(r.HandleRoot, r.config.Logger)
+}
+
+func makePingEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(r.HandlePing, r.config.Logger)
+}
+
+func makeUIEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(r.HandleUI, r.config.Logger)
+}
+
+func makeStatsEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(HandleMemStats, r.config.Logger)
+}
+
+func makeUpstreamsEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(r.HandleUpstreams, r.config.Logger)
+}
+
+func makePkgRootEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(
 		wrapUpstreamHandle(
 			wrapRepoHandle(r.HandlePackageRoot, r.storage),
 			r.upstream,
 		),
 		r.config.Logger,
-	))
-	r.mux.Get("/:name/-/:version.tgz", wrapErrHandle(
+	)
+}
+
+func makePkgDownloadEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(
 		wrapUpstreamHandle(
 			wrapRepoHandle(r.HandlePkgDownload, r.storage),
 			r.upstream,
 		),
 		r.config.Logger,
-	))
-	r.mux.Get("/:name/stats", wrapErrHandle(
+	)
+}
+
+func makePkgStatsEndpoint(r *Registry) http.HandlerFunc {
+	return wrapErrHandle(
 		wrapRepoHandle(HandlePkgStats, r.storage),
 		r.config.Logger,
-	))
-
-	return nil
+	)
 }
 
 // errHandle is a custom HTTP handle that can optionally return an error.
